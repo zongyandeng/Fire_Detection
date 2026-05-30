@@ -3,12 +3,11 @@ title Industrial AI Fire Detection - Startup Script
 color 0A
 
 echo ===================================================
-echo   🚨 Industrial AI Fire & Smoke Detection System 🚨
+echo   Industrial AI Fire and Smoke Detection System
 echo   Deployment: Windows On-Premise GPU Server (Scheme B)
 echo ===================================================
 echo.
 
-:: Detect Base Directory
 set BASE_DIR=%~dp0..
 cd /d "%BASE_DIR%"
 
@@ -21,12 +20,12 @@ cd frontend
 start /b cmd /c "npm run dev > ..\frontend_service.log 2>&1"
 timeout /t 5 > nul
 
-echo [3/3] System successfully started! Opening dashboard in browser...
+echo [3/3] System successfully started! Opening dashboard...
 start http://localhost:5173
 
 echo ===================================================
-echo   🟢 System is running 24/7 in the background.
-echo   - Backend API & WebSocket: Port 8000
+echo   System is running 24/7 in the background.
+echo   - Backend API and WebSocket: Port 8000
 echo   - Frontend Web Dashboard: Port 5173
 echo   - Closing this window will stop local services.
 echo ===================================================
