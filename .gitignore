@@ -1,0 +1,45 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node dependencies & build
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Large media files (keep directory structure but ignore mp4/avi/etc)
+backend/data/videos/*.mp4
+backend/data/videos/*.avi
+backend/data/videos/*.mkv
+
+# Model weights
+backend/data/models/*.pt
+backend/data/models/*.onnx
+
+# Alarm history recordings & snapshots (prevent committing industrial telemetry data)
+backend/data/alarms/*
+!backend/data/alarms/.gitkeep
+
+# Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

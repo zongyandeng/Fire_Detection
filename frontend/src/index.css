@@ -1,0 +1,252 @@
+:root {
+  --bg-primary: #0a0b0e;
+  --bg-secondary: #13151b;
+  --bg-tertiary: #1b1e26;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  
+  /* 工業科技配色 */
+  --neon-orange: #ff5a00;
+  --neon-blue: #00f0ff;
+  --warning-red: #ff0055;
+  --normal-green: #00ff66;
+  --system-fault-yellow: #ffb700;
+  
+  --border-glass: rgba(255, 255, 255, 0.05);
+  --bg-glass: rgba(19, 21, 27, 0.7);
+  --blur-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  font-size: 14px;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(255, 90, 0, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* 工業網格背景紋理 */
+.industrial-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 玻璃擬態面板 */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--blur-radius));
+  -webkit-backdrop-filter: blur(var(--blur-radius));
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* 警報紅色脈衝邊框 */
+.glass-panel.suspected-active {
+  border-color: rgba(255, 0, 85, 0.4);
+  box-shadow: 0 0 20px 2px rgba(255, 0, 85, 0.25);
+  animation: pulse-border-red 1.5s infinite alternate;
+}
+
+.glass-panel.confirmed-active {
+  border-color: var(--warning-red);
+  box-shadow: 0 0 30px 5px rgba(255, 0, 85, 0.4);
+  animation: pulse-border-heavy-red 1s infinite alternate;
+}
+
+.glass-panel.fault-active {
+  border-color: rgba(255, 183, 0, 0.4);
+  box-shadow: 0 0 20px 2px rgba(255, 183, 0, 0.2);
+  animation: pulse-border-yellow 1.5s infinite alternate;
+}
+
+/* 全螢幕緊急警報背景波紋 */
+.alarm-overlay-red {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  box-shadow: inset 0 0 100px rgba(255, 0, 85, 0.4);
+  pointer-events: none;
+  z-index: 9999;
+  animation: pulse-bg-red 1s infinite alternate;
+}
+
+.alarm-overlay-yellow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  box-shadow: inset 0 0 80px rgba(255, 183, 0, 0.25);
+  pointer-events: none;
+  z-index: 9999;
+  animation: pulse-bg-yellow 1.5s infinite alternate;
+}
+
+/* 呼吸燈動畫 */
+@keyframes pulse-border-red {
+  0% { border-color: rgba(255, 0, 85, 0.2); }
+  100% { border-color: rgba(255, 0, 85, 0.6); }
+}
+
+@keyframes pulse-border-heavy-red {
+  0% { border-color: rgba(255, 0, 85, 0.5); }
+  100% { border-color: rgba(255, 0, 85, 1.0); }
+}
+
+@keyframes pulse-border-yellow {
+  0% { border-color: rgba(255, 183, 0, 0.2); }
+  100% { border-color: rgba(255, 183, 0, 0.6); }
+}
+
+@keyframes pulse-bg-red {
+  0% { box-shadow: inset 0 0 50px rgba(255, 0, 85, 0.2); }
+  100% { box-shadow: inset 0 0 150px rgba(255, 0, 85, 0.55); }
+}
+
+@keyframes pulse-bg-yellow {
+  0% { box-shadow: inset 0 0 40px rgba(255, 183, 0, 0.15); }
+  100% { box-shadow: inset 0 0 100px rgba(255, 183, 0, 0.35); }
+}
+
+/* LED 脈衝呼吸燈 */
+.led-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.led-blue {
+  color: var(--neon-blue);
+  background-color: var(--neon-blue);
+  animation: led-pulse 1.2s infinite alternate;
+}
+
+.led-green {
+  color: var(--normal-green);
+  background-color: var(--normal-green);
+  animation: led-pulse 1.2s infinite alternate;
+}
+
+.led-red {
+  color: var(--warning-red);
+  background-color: var(--warning-red);
+  animation: led-pulse 0.6s infinite alternate;
+}
+
+.led-yellow {
+  color: var(--system-fault-yellow);
+  background-color: var(--system-fault-yellow);
+  animation: led-pulse 1.2s infinite alternate;
+}
+
+@keyframes led-pulse {
+  0% { opacity: 0.4; transform: scale(0.9); box-shadow: 0 0 4px currentColor; }
+  100% { opacity: 1.0; transform: scale(1.15); box-shadow: 0 0 12px currentColor; }
+}
+
+/* 心跳網波形動畫 */
+.heartbeat-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dash 4s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 按鈕與互動微動畫 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--neon-orange) 0%, #d43f00 100%);
+  color: white;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(255, 90, 0, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 90, 0, 0.45);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--warning-red) 0%, #cc003c 100%);
+  color: white;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(255, 0, 85, 0.3);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 0, 85, 0.45);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 網頁滾動條美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
