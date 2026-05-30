@@ -1,34 +1,34 @@
 @echo off
-title 工業級 NVR AI 火災與煙霧防禦監控系統 - 啟動腳本
+title Industrial AI Fire Detection - Startup Script
 color 0A
 
 echo ===================================================
-echo   🚨 工業級 NVR AI 火災與煙霧防禦監控系統 🚨
-echo   部署模式: Windows 原生集中式 GPU 伺服器 (方案 B)
+echo   🚨 Industrial AI Fire & Smoke Detection System 🚨
+echo   Deployment: Windows On-Premise GPU Server (Scheme B)
 echo ===================================================
 echo.
 
-:: 偵測當前目錄
+:: Detect Base Directory
 set BASE_DIR=%~dp0..
 cd /d "%BASE_DIR%"
 
-echo 1. 正在背景啟動 FastAPI 後端推理引擎...
+echo [1/3] Starting FastAPI Backend Inference Engine...
 start /b cmd /c "python backend/main.py > backend_service.log 2>&1"
 timeout /t 3 > nul
 
-echo 2. 正在背景啟動 React Vite 前端監控面板...
+echo [2/3] Starting React Vite Frontend Dashboard...
 cd frontend
 start /b cmd /c "npm run dev > ..\frontend_service.log 2>&1"
 timeout /t 5 > nul
 
-echo 3. 系統啟動成功！正在打開即時安全儀表板...
+echo [3/3] System successfully started! Opening dashboard in browser...
 start http://localhost:5173
 
 echo ===================================================
-echo   🟢 監控系統已在背景 24/7 持續執行中。
-echo   - 後端 API & WebSocket 埠: 8000
-echo   - 前端 Web 儀表板埠: 5173
-echo   - 關閉此視窗將停止本地服務
+echo   🟢 System is running 24/7 in the background.
+echo   - Backend API & WebSocket: Port 8000
+echo   - Frontend Web Dashboard: Port 5173
+echo   - Closing this window will stop local services.
 echo ===================================================
 echo.
 pause
