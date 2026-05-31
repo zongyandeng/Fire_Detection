@@ -473,6 +473,16 @@ function App() {
   const [wsConnected, setWsConnected] = useState(false);
   const [isPowerCycling, setIsPowerCycling] = useState(false); // 重啟 NVR 伺服器狀態
   
+  // 歷史告警日誌搜尋與過濾條件 state
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterDate, setFilterDate] = useState('2026-05-31'); // 預設今天 2026-05-31
+  const [filterKeyword, setFilterKeyword] = useState('');
+
+  // 點擊「搜尋」按鈕後真正生效的過濾條件
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeDate, setActiveDate] = useState('2026-05-31');
+  const [activeKeyword, setActiveKeyword] = useState('');
+
   // 心跳折線圖數值快取
   const [heartbeatPoints, setHeartbeatPoints] = useState([50, 45, 55, 40, 50, 80, 20, 50, 48, 52, 50]);
   const wsRef = useRef(null);
@@ -2003,88 +2013,173 @@ function App() {
             )}
 
             {/* ================= SPA 畫面 5: 搜尋與日誌 (Search) ================= */}
-            {activeView === 'search' && (
-              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: '16px' }}>🔍 歷史告警日誌與微調負樣本搜尋 (Event Logs Search)</strong>
-                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
-                </div>
+            {activeView === 'search' && (() => {
+              // 在渲染前先過濾日誌
+              const filteredLogs = systemState.alarm_logs.filter(log => {
+                // 1. 事件分類篩選
+                if (activeCategory === 'shunt_trip' && !log.shunt_trip) {
+                  return false;
+                }
+                if (activeCategory === 'fire_auto' && log.shunt_trip === false) {
+                  // 如果只看火警，則必須是告警日誌
+                }
+                if (activeCategory === 'fault') {
+                  return false; // 目前系統日誌皆為火警相關，故此分類查無資料
+                }
 
-                {/* 搜尋過濾條件 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 120px', gap: '15px', alignItems: 'flex-end' }}>
-                  <div>
-                    <label className="nvr-label">事件分類</label>
-                    <select className="nvr-input">
-                      <option>所有事件 (火警與故障)</option>
-                      <option>🚨 AI 自動火警通報</option>
-                      <option>⚡ 分勵脫扣器切斷電源</option>
-                      <option>⚠️ 系統故障/心跳中斷</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="nvr-label">查詢起訖時間</label>
-                    <input type="date" className="nvr-input" defaultValue="2026-05-30" />
-                  </div>
-                  <div>
-                    <label className="nvr-label">部署通道區域</label>
-                    <input type="text" placeholder="輸入關鍵字如：A棟" className="nvr-input" />
-                  </div>
-                  <button onClick={() => alert("過濾日誌成功！")} className="nvr-btn" style={{ width: '100%', height: '38px' }}>
-                    搜尋 🔍
-                  </button>
-                </div>
+                // 2. 日期篩選
+                if (activeDate) {
+                  if (!log.timestamp.startsWith(activeDate)) {
+                    return false;
+                  }
+                }
 
-                {/* 日誌結果表格 (與原本的日誌完美同步) */}
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--nvr-border)', color: 'var(--nvr-text-muted)' }}>
-                        <th style={{ padding: '10px' }}>編號</th>
-                        <th>事件時間</th>
-                        <th>事件類型</th>
-                        <th>部署通道</th>
-                        <th>特徵信賴度</th>
-                        <th>分勵脫扣斷電</th>
-                        <th>告警截圖備份</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {systemState.alarm_logs.length > 0 ? (
-                        systemState.alarm_logs.map((log, idx) => (
-                          <tr key={log.id} style={{ borderBottom: '1px solid var(--nvr-border)' }}>
-                            <td style={{ padding: '10px' }}>#{log.id}</td>
-                            <td>{log.timestamp}</td>
-                            <td style={{ color: 'var(--alarm-red)', fontWeight: 'bold' }}>🚨 AI 自動火警通報</td>
-                            <td>{log.camera_id}</td>
-                            <td>{(log.confidence * 100).toFixed(1)}%</td>
-                            <td style={{ color: 'var(--alarm-red)' }}>{log.shunt_trip ? '⚡ 已斷開 (DISCONNECTED)' : '🔌 未聯動'}</td>
-                            <td>
-                              {log.snapshot && (
-                                <a 
-                                  href={`http://127.0.0.1:8000${log.snapshot}`} 
-                                  target="_blank" 
-                                  rel="noreferrer" 
-                                  style={{ color: 'var(--info-blue)', textDecoration: 'underline' }}
-                                >
-                                  查看 JPG 影像
-                                </a>
-                              )}
+                // 3. 關鍵字篩選 (不分大小寫)
+                if (activeKeyword) {
+                  const kw = activeKeyword.toLowerCase();
+                  const camIdMatch = log.camera_id.toLowerCase().includes(kw);
+                  const timestampMatch = log.timestamp.toLowerCase().includes(kw);
+                  const idMatch = `#${log.id}`.includes(kw);
+                  if (!camIdMatch && !timestampMatch && !idMatch) {
+                    return false;
+                  }
+                }
+
+                return true;
+              });
+
+              return (
+                <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <strong style={{ fontSize: '16px' }}>🔍 歷史告警日誌與微調負樣本搜尋 (Event Logs Search)</strong>
+                    <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                  </div>
+
+                  {/* 搜尋過濾條件 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 120px 120px', gap: '15px', alignItems: 'flex-end' }}>
+                    <div>
+                      <label className="nvr-label">事件分類</label>
+                      <select 
+                        className="nvr-input" 
+                        value={filterCategory} 
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                      >
+                        <option value="all">所有事件 (火警與故障)</option>
+                        <option value="fire_auto">🚨 AI 自動火警通報</option>
+                        <option value="shunt_trip">⚡ 分勵脫扣器切斷電源</option>
+                        <option value="fault">⚠️ 系統故障/心跳中斷</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="nvr-label">查詢起訖時間</label>
+                      <input 
+                        type="date" 
+                        className="nvr-input" 
+                        value={filterDate} 
+                        onChange={(e) => setFilterDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="nvr-label">部署通道區域</label>
+                      <input 
+                        type="text" 
+                        placeholder="輸入關鍵字如：A棟" 
+                        className="nvr-input" 
+                        value={filterKeyword}
+                        onChange={(e) => setFilterKeyword(e.target.value)}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setActiveCategory(filterCategory);
+                        setActiveDate(filterDate);
+                        setActiveKeyword(filterKeyword);
+                      }} 
+                      className="nvr-btn" 
+                      style={{ width: '100%', height: '38px', borderColor: 'var(--nvr-border-focus)' }}
+                    >
+                      搜尋 🔍
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setFilterCategory('all');
+                        setFilterDate('2026-05-31');
+                        setFilterKeyword('');
+                        setActiveCategory('all');
+                        setActiveDate('2026-05-31');
+                        setActiveKeyword('');
+                      }} 
+                      className="nvr-btn" 
+                      style={{ width: '100%', height: '38px', borderColor: 'rgba(255, 255, 255, 0.15)' }}
+                    >
+                      重設 🔄
+                    </button>
+                  </div>
+
+                  {/* 篩選條件狀態展示 */}
+                  <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'flex', gap: '15px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '4px' }}>
+                    <span>已套用篩選 ── 分類: <strong>{activeCategory === 'all' ? '全部' : activeCategory === 'fire_auto' ? '自動火警通報' : activeCategory === 'shunt_trip' ? '分勵脫扣斷電' : '系統故障'}</strong></span>
+                    <span>日期: <strong>{activeDate || '無限制'}</strong></span>
+                    <span>關鍵字: <strong>{activeKeyword || '無限制'}</strong></span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--info-blue)' }}>找到 <strong>{filteredLogs.length}</strong> 筆符合條件的日誌</span>
+                  </div>
+
+                  {/* 日誌結果表格 (與原本的日誌完美同步) */}
+                  <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--nvr-border)', color: 'var(--nvr-text-muted)' }}>
+                          <th style={{ padding: '10px' }}>編號</th>
+                          <th>事件時間</th>
+                          <th>事件類型</th>
+                          <th>部署通道</th>
+                          <th>特徵信賴度</th>
+                          <th>分勵脫扣斷電</th>
+                          <th>告警截圖備份</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLogs.length > 0 ? (
+                          filteredLogs.map((log, idx) => (
+                            <tr key={log.id} style={{ borderBottom: '1px solid var(--nvr-border)' }}>
+                              <td style={{ padding: '10px' }}>#{log.id}</td>
+                              <td>{log.timestamp}</td>
+                              <td style={{ color: log.shunt_trip ? 'var(--alarm-red)' : 'var(--alarm-yellow)', fontWeight: 'bold' }}>
+                                {log.shunt_trip ? '🚨 AI 自動火警通報' : '⚠️ AI 疑似火警預警'}
+                              </td>
+                              <td>{log.camera_id}</td>
+                              <td>{(log.confidence * 100).toFixed(1)}%</td>
+                              <td style={{ color: log.shunt_trip ? 'var(--alarm-red)' : 'var(--nvr-text-muted)' }}>
+                                {log.shunt_trip ? '⚡ 已斷開 (DISCONNECTED)' : '🔌 未聯動'}
+                              </td>
+                              <td>
+                                {log.snapshot && (
+                                  <a 
+                                    href={`http://127.0.0.1:8000${log.snapshot}`} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    style={{ color: 'var(--info-blue)', textDecoration: 'underline' }}
+                                  >
+                                    查看 JPG 影像
+                                  </a>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: 'var(--nvr-text-muted)' }}>
+                              🗄️ 查無符合條件的告警歷史事件記錄
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: 'var(--nvr-text-muted)' }}>
-                            🗄️ 目前無告警歷史事件記錄 (後端檔案空間設有 30MB 循環清理限制)
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
             {/* ================= SPA 畫面 6: 遙測與物理特徵資訊 (Information) ================= */}
             {activeView === 'information' && (
