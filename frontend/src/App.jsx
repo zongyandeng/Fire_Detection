@@ -39,6 +39,9 @@ function App() {
       next[slotIndex] = cameraId;
       return next;
     });
+    if (slotIndex === selectedSlotIndex) {
+      setSelectedCameraId(cameraId);
+    }
     setIsAutoTouring(false); // 手動修改插槽時，停止自動輪巡以防衝突
   };
 
@@ -50,10 +53,18 @@ function App() {
     setIsAutoTouring(false);
   };
 
-  // 切換至下一張螢幕 (分頁)
+  // 切換至下一張螢幕 (分頁或單一螢幕下一台攝影機)
   const handleNextScreen = () => {
     setActiveView('live_view');
     setIsAutoTouring(false); // 手動切換時停止自動輪巡
+    if (screenLayout === 'grid-1') {
+      const currentCamIndex = cameras.findIndex(c => c.id === selectedCameraId);
+      const nextCamIndex = (currentCamIndex + 1) % cameras.length;
+      const nextCamId = cameras[nextCamIndex].id;
+      handleAssignCameraToSlot(selectedSlotIndex, nextCamId);
+      return;
+    }
+    // 原有的 4, 9 分割畫面邏輯
     const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
     if (limit === 12) return;
     const maxPages = Math.ceil(cameras.length / limit);
@@ -69,10 +80,18 @@ function App() {
     });
   };
 
-  // 切換至上一螢幕 (分頁)
+  // 切換至上一螢幕 (分頁或單一螢幕上一台攝影機)
   const handlePrevScreen = () => {
     setActiveView('live_view');
     setIsAutoTouring(false); // 手動切換時停止自動輪巡
+    if (screenLayout === 'grid-1') {
+      const currentCamIndex = cameras.findIndex(c => c.id === selectedCameraId);
+      const prevCamIndex = (currentCamIndex - 1 + cameras.length) % cameras.length;
+      const prevCamId = cameras[prevCamIndex].id;
+      handleAssignCameraToSlot(selectedSlotIndex, prevCamId);
+      return;
+    }
+    // 原有的 4, 9 分割畫面邏輯
     const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
     if (limit === 12) return;
     const maxPages = Math.ceil(cameras.length / limit);
@@ -103,12 +122,21 @@ function App() {
     alert(`影像渲染切換成功：${modeNames[modes[nextIndex]]}`);
   };
 
-  // 啟動自動電視牆畫面輪巡 (每 4 秒切換下一頁)
+  // 啟動自動電視牆畫面輪巡 (每 4 秒切換下一頁或單一畫面下一台攝影機)
   useEffect(() => {
     if (!isAutoTouring) return;
     const interval = setInterval(() => {
+      if (screenLayout === 'grid-1') {
+        const currentCamIndex = cameras.findIndex(c => c.id === selectedCameraId);
+        const nextCamIndex = (currentCamIndex + 1) % cameras.length;
+        const nextCamId = cameras[nextCamIndex].id;
+        handleAssignCameraToSlot(selectedSlotIndex, nextCamId);
+        return;
+      }
+      
+      // 原有 4, 9 分割畫面邏輯
       const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
-      if (limit === 12) return; // 12分割不用輪巡，只有一頁
+      if (limit === 12) return;
       const maxPages = Math.ceil(cameras.length / limit);
       setTourPage(prev => {
         const nextPage = (prev + 1) % maxPages;
@@ -124,7 +152,7 @@ function App() {
       });
     }, 4000);
     return () => clearInterval(interval);
-  }, [isAutoTouring, screenLayout, cameras]);
+  }, [isAutoTouring, screenLayout, cameras, selectedCameraId, selectedSlotIndex]);
 
   // 確保當 cameras 列表新增或刪減時，電視牆插槽 activeSlots 也會即時進行安全更新與過濾
   useEffect(() => {
@@ -728,27 +756,31 @@ function App() {
                 <div style={{ flex: 1, display: 'flex', gap: '15px', overflow: 'hidden' }}>
                   
                   {/* 左側電視牆通道管理器 (專業工控面板樣式) */}
-                  {screenLayout !== 'grid-1' && (
-                    <div className="nvr-panel" style={{ width: '280px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}>
-                      <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '8px' }}>
-                        <strong style={{ fontSize: '13px', color: 'var(--nvr-text)', display: 'block' }}>📺 電視牆插槽配置</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>自訂多分割畫面監看通道</span>
-                      </div>
+                  <div className="nvr-panel" style={{ width: '280px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}>
+                    <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '8px' }}>
+                      <strong style={{ fontSize: '13px', color: 'var(--nvr-text)', display: 'block' }}>📺 電視牆插槽配置</strong>
+                      <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>自訂多分割畫面監看通道</span>
+                    </div>
 
-                      {/* 插槽選取器 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontWeight: 'bold' }}>1. 點選指定視窗 (Slot)</span>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          {activeSlots.slice(0, screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12).map((cameraId, idx) => {
-                            const isSel = selectedSlotIndex === idx;
-                            const camName = cameras.find(c => c.id === cameraId)?.name.split(' - ')[0] || `CH${idx+1}`;
-                            return (
-                              <button
-                                key={`slot-btn-${idx}`}
-                                onClick={() => setSelectedSlotIndex(idx)}
-                                className={`nvr-btn ${isSel ? 'active' : ''}`}
-                                style={{ fontSize: '11px', padding: '5px', height: '32px' }}
-                              >
+                    {/* 插槽選取器 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontWeight: 'bold' }}>1. 點選指定視窗 (Slot)</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        {activeSlots.slice(0, screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12).map((cameraId, idx) => {
+                          const isSel = selectedSlotIndex === idx;
+                          const camName = cameras.find(c => c.id === cameraId)?.name.split(' - ')[0] || `CH${idx+1}`;
+                          return (
+                            <button
+                              key={`slot-btn-${idx}`}
+                              onClick={() => {
+                                setSelectedSlotIndex(idx);
+                                if (screenLayout === 'grid-1') {
+                                  setSelectedCameraId(activeSlots[idx]);
+                                }
+                              }}
+                              className={`nvr-btn ${isSel ? 'active' : ''}`}
+                              style={{ fontSize: '11px', padding: '5px', height: '32px' }}
+                            >
                                 {isSel ? '🎯' : '🔲'} 視窗 {idx + 1} ({camName})
                               </button>
                             );
@@ -812,7 +844,6 @@ function App() {
                         </button>
                       </div>
                     </div>
-                  )}
 
                   {/* 右側監控網格區域 */}
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden', border: '2px solid var(--nvr-border)', borderRadius: '4px' }}>
@@ -838,8 +869,39 @@ function App() {
                             >
                               <div className="camera-static"></div>
                               
-                              {/* OSD 浮動標籤 */}
-                              <div className="camera-osd top-left">{cam.name}</div>
+                              {/* OSD 頂部左側：支援點擊與下拉選單 */}
+                              <div className="camera-osd top-left" style={{ display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                                <span style={{ fontWeight: 'bold', background: 'rgba(0, 0, 0, 0.5)', padding: '2px 6px', borderRadius: '3px' }}>
+                                  視窗 {selectedSlotIndex + 1}
+                                </span>
+                                <span style={{ textShadow: '1px 1px 2px #000', fontSize: '11px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {cam.name.split(' - ')[1] || cam.name}
+                                </span>
+                                <select
+                                  value={cam.id}
+                                  onChange={(e) => {
+                                    handleAssignCameraToSlot(selectedSlotIndex, e.target.value);
+                                  }}
+                                  style={{
+                                    background: 'rgba(22, 24, 29, 0.95)',
+                                    border: '1px solid var(--nvr-border)',
+                                    color: 'var(--nvr-text)',
+                                    fontSize: '10px',
+                                    padding: '1px 4px',
+                                    borderRadius: '3px',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                    marginLeft: '2px',
+                                    pointerEvents: 'auto'
+                                  }}
+                                >
+                                  {cameras.map(c => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name.split(' - ')[0] /* CH1, CH2等 */}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                               <div className="camera-osd top-right">
                                 {pictureMode !== 'default' && (
                                   <span style={{
@@ -1067,7 +1129,7 @@ function App() {
                       <button 
                         onClick={() => {
                           if (screenLayout === 'grid-12') {
-                            alert("提示：12分割電視牆已滿版顯示全部通道，無需輪巡。請先切換至 4分割 或 9分割 畫面後啟動輪巡！");
+                            alert("提示：12分割電視牆已滿版顯示全部通道，無需輪巡。請先切換至 單螢幕、4分割 或 9分割 畫面後啟動輪巡！");
                             return;
                           }
                           setIsAutoTouring(p => !p);
