@@ -33,7 +33,7 @@ function App() {
   const [pictureMode, setPictureMode] = useState('default'); // default | vivid | infrared | thermal
 
   // 指派相機到特定電視牆插槽
-  const handleAssignCameraToSlot = (slotIndex, cameraId) => {
+  const handleAssignCameraToSlot = (slotIndex, cameraId, isAuto = false) => {
     setActiveSlots(prev => {
       const next = [...prev];
       next[slotIndex] = cameraId;
@@ -42,13 +42,17 @@ function App() {
     if (slotIndex === selectedSlotIndex) {
       setSelectedCameraId(cameraId);
     }
-    setIsAutoTouring(false); // 手動修改插槽時，停止自動輪巡以防衝突
+    if (!isAuto) {
+      setIsAutoTouring(false); // 手動修改插槽時，停止自動輪巡以防衝突
+    }
   };
 
   // 重設為預設通道 (CH1 ~ CH12)
   const handleResetSlots = () => {
+    const defaultCamId = INITIAL_CAMERAS[0]?.id || 'CAM_A_DIST_BOARD';
     setActiveSlots(INITIAL_CAMERAS.map(c => c.id));
     setSelectedSlotIndex(0);
+    setSelectedCameraId(defaultCamId);
     setTourPage(0);
     setIsAutoTouring(false);
   };
@@ -130,7 +134,7 @@ function App() {
         const currentCamIndex = cameras.findIndex(c => c.id === selectedCameraId);
         const nextCamIndex = (currentCamIndex + 1) % cameras.length;
         const nextCamId = cameras[nextCamIndex].id;
-        handleAssignCameraToSlot(selectedSlotIndex, nextCamId);
+        handleAssignCameraToSlot(selectedSlotIndex, nextCamId, true);
         return;
       }
       
@@ -797,10 +801,16 @@ function App() {
                           {cameras.map(cam => {
                             // 檢查此攝影機是否已被指派，指派在哪幾個插槽
                             const assignedSlots = [];
-                            const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
-                            activeSlots.slice(0, limit).forEach((id, idx) => {
-                              if (id === cam.id) assignedSlots.push(idx + 1);
-                            });
+                            if (screenLayout === 'grid-1') {
+                              if (activeSlots[selectedSlotIndex] === cam.id) {
+                                assignedSlots.push(selectedSlotIndex + 1);
+                              }
+                            } else {
+                              const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+                              activeSlots.slice(0, limit).forEach((id, idx) => {
+                                if (id === cam.id) assignedSlots.push(idx + 1);
+                              });
+                            }
 
                             return (
                               <button
