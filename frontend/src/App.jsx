@@ -22,6 +22,25 @@ function App() {
   const [screenLayout, setScreenLayout] = useState('grid-12'); // grid-1 | grid-4 | grid-9 | grid-12
   const [selectedCameraId, setSelectedCameraId] = useState('CAM_A_DIST_BOARD');
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
+
+  // 電視牆自訂通道與插槽狀態
+  const [activeSlots, setActiveSlots] = useState(INITIAL_CAMERAS.map(c => c.id));
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
+
+  // 指派相機到特定電視牆插槽
+  const handleAssignCameraToSlot = (slotIndex, cameraId) => {
+    setActiveSlots(prev => {
+      const next = [...prev];
+      next[slotIndex] = cameraId;
+      return next;
+    });
+  };
+
+  // 重設為預設通道 (CH1 ~ CH12)
+  const handleResetSlots = () => {
+    setActiveSlots(INITIAL_CAMERAS.map(c => c.id));
+    setSelectedSlotIndex(0);
+  };
   
   // NVR 時間戳 (秒級即時更新)
   const [nvrTime, setNvrTime] = useState(new Date().toLocaleString('zh-TW', { hour12: false }));
@@ -655,82 +674,258 @@ function App() {
             {activeView === 'live_view' && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
                 
-                {/* 監控網格區域 */}
-                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', border: '2px solid var(--nvr-border)', borderRadius: '4px' }}>
+                {/* 核心工作排版：左側通道與插槽配置面板，右側電視牆 */}
+                <div style={{ flex: 1, display: 'flex', gap: '15px', overflow: 'hidden' }}>
                   
-                  {/* 使用 React 狀態產生的電視牆網格 */}
-                  <div className={`camera-grid ${screenLayout}`}>
-                    
-                    {cameras.map((cam, index) => {
-                      // 判定這個網格在目前的 layout 下是否應當顯示
-                      // grid-1：僅顯示選中的那一路
-                      // grid-4：顯示前 4 路
-                      // grid-9：顯示前 9 路
-                      // grid-12：顯示全部 12 路
-                      const isSelected = selectedCameraId === cam.id;
-                      const layoutLimit = screenLayout === 'grid-1' ? 1 : screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
-                      
-                      if (screenLayout === 'grid-1' && !isSelected) return null;
-                      if (screenLayout !== 'grid-1' && index >= layoutLimit) return null;
+                  {/* 左側電視牆通道管理器 (專業工控面板樣式) */}
+                  {screenLayout !== 'grid-1' && (
+                    <div className="nvr-panel" style={{ width: '280px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}>
+                      <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: 'var(--nvr-text)', display: 'block' }}>📺 電視牆插槽配置</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>自訂多分割畫面監看通道</span>
+                      </div>
 
-                      // CH1 (Realtime) 火警時發出紅色閃爍
-                      const isCH1Alarm = cam.id === 'CAM_A_DIST_BOARD' && (systemState.confirmed_fire || systemState.suspected_fire);
-                      const isSystemFaultCell = cam.id === 'CAM_A_DIST_BOARD' && systemState.system_fault;
-
-                      return (
-                        <div 
-                          key={cam.id}
-                          onClick={() => {
-                            setSelectedCameraId(cam.id);
-                            // 若點擊選中的，則雙擊效果放大成單螢幕
-                            if (isSelected) {
-                              setScreenLayout(screenLayout === 'grid-1' ? 'grid-12' : 'grid-1');
-                            }
-                          }}
-                          className={`camera-cell ${isSelected ? 'selected' : ''} ${isCH1Alarm ? 'alarm-active' : ''} ${isSystemFaultCell ? 'fault-active' : ''}`}
-                        >
-                          <div className="camera-static"></div>
-                          
-                          {/* OSD 浮動標籤 */}
-                          <div className="camera-osd top-left">{cam.name}</div>
-                          <div className="camera-osd top-right">
-                            {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
-                            <span style={{ color: '#10b981' }}>● REC</span>
-                          </div>
-                          
-                          {/* OSD 底部標籤：時間與物理引擎簡短狀態 */}
-                          <div className="camera-osd bottom-left">{nvrTime}</div>
-                          <div className="camera-osd bottom-right" style={{ fontSize: '10px' }}>
-                            {cam.id === 'CAM_A_DIST_BOARD' 
-                              ? (systemState.confirmed_fire ? '🔥 ALARM TRIGGERED' : systemState.suspected_fire ? '⚠️ DETECTING FIRE...' : '🟢 SAFE') 
-                              : '🟢 NORMAL'}
-                          </div>
-
-                          {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
-                          <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                            {cam.id === 'CAM_A_DIST_BOARD' ? (
-                              streamData?.image ? (
-                                <img
-                                  src={streamData.image}
-                                  alt="Realtime Cam Stream"
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                              ) : (
-                                <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center', fontSize: '12px' }}>
-                                  <span style={{ fontSize: '24px', display: 'block', animation: 'flash-slow 1s infinite alternate' }}>🎥</span>
-                                  正在讀取 A棟配電櫃 RTSP 串流...
-                                </div>
-                              )
-                            ) : (
-                              renderSimulatedChannel(cam.id)
-                            )}
-                          </div>
+                      {/* 插槽選取器 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontWeight: 'bold' }}>1. 點選指定視窗 (Slot)</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {activeSlots.slice(0, screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12).map((cameraId, idx) => {
+                            const isSel = selectedSlotIndex === idx;
+                            const camName = cameras.find(c => c.id === cameraId)?.name.split(' - ')[0] || `CH${idx+1}`;
+                            return (
+                              <button
+                                key={`slot-btn-${idx}`}
+                                onClick={() => setSelectedSlotIndex(idx)}
+                                className={`nvr-btn ${isSel ? 'active' : ''}`}
+                                style={{ fontSize: '11px', padding: '5px', height: '32px' }}
+                              >
+                                {isSel ? '🎯' : '🔲'} 視窗 {idx + 1} ({camName})
+                              </button>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      </div>
 
+                      <div style={{ borderBottom: '1px dashed var(--nvr-border)' }}></div>
+
+                      {/* 攝影機通道指派清單 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontWeight: 'bold' }}>2. 選擇攝影機通道進行分配</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '350px' }}>
+                          {cameras.map(cam => {
+                            // 檢查此攝影機是否已被指派，指派在哪幾個插槽
+                            const assignedSlots = [];
+                            const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+                            activeSlots.slice(0, limit).forEach((id, idx) => {
+                              if (id === cam.id) assignedSlots.push(idx + 1);
+                            });
+
+                            return (
+                              <button
+                                key={`assign-cam-${cam.id}`}
+                                onClick={() => handleAssignCameraToSlot(selectedSlotIndex, cam.id)}
+                                className="nvr-btn"
+                                style={{
+                                  fontSize: '11px',
+                                  justifyContent: 'flex-start',
+                                  padding: '8px 10px',
+                                  borderColor: assignedSlots.length > 0 ? 'var(--info-blue)' : 'var(--nvr-border)',
+                                  backgroundColor: assignedSlots.length > 0 ? 'rgba(59, 130, 246, 0.05)' : 'var(--nvr-btn-bg)',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '10px', flexShrink: 0 }}>🎥</span>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cam.name.split(' - ')[0]}</span>
+                                  </div>
+                                  {assignedSlots.length > 0 && (
+                                    <span style={{ fontSize: '9px', background: 'var(--info-blue)', color: '#fff', padding: '1px 4px', borderRadius: '2px', flexShrink: 0 }}>
+                                      視窗 {assignedSlots.join(',')}
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 重設與動作區 */}
+                      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          onClick={handleResetSlots}
+                          className="nvr-btn"
+                          style={{ fontSize: '11px', width: '100%', background: 'rgba(255,255,255,0.05)', color: 'var(--nvr-text)' }}
+                        >
+                          🔄 重設為預設通道 (CH1-CH12)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 右側監控網格區域 */}
+                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden', border: '2px solid var(--nvr-border)', borderRadius: '4px' }}>
+                    
+                    {/* 使用 React 狀態產生的電視牆網格 */}
+                    <div className={`camera-grid ${screenLayout}`}>
+                      
+                      {(() => {
+                        if (screenLayout === 'grid-1') {
+                          // grid-1: 僅顯示目前選中的那一路
+                          const cam = cameras.find(c => c.id === selectedCameraId) || cameras[0];
+                          const isCH1Alarm = cam.id === 'CAM_A_DIST_BOARD' && (systemState.confirmed_fire || systemState.suspected_fire);
+                          const isSystemFaultCell = cam.id === 'CAM_A_DIST_BOARD' && systemState.system_fault;
+                          
+                          return (
+                            <div 
+                              key={cam.id}
+                              onClick={() => {
+                                // 在 grid-1 下，再點一次可切換回多路（預設回到 grid-12）
+                                setScreenLayout('grid-12');
+                              }}
+                              className={`camera-cell selected ${isCH1Alarm ? 'alarm-active' : ''} ${isSystemFaultCell ? 'fault-active' : ''}`}
+                            >
+                              <div className="camera-static"></div>
+                              
+                              {/* OSD 浮動標籤 */}
+                              <div className="camera-osd top-left">{cam.name}</div>
+                              <div className="camera-osd top-right">
+                                {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
+                                <span style={{ color: '#10b981' }}>● REC</span>
+                              </div>
+                              
+                              {/* OSD 底部標籤：時間與物理引擎簡短狀態 */}
+                              <div className="camera-osd bottom-left">{nvrTime}</div>
+                              <div className="camera-osd bottom-right" style={{ fontSize: '10px' }}>
+                                {cam.id === 'CAM_A_DIST_BOARD' 
+                                  ? (systemState.confirmed_fire ? '🔥 ALARM TRIGGERED' : systemState.suspected_fire ? '⚠️ DETECTING FIRE...' : '🟢 SAFE') 
+                                  : '🟢 NORMAL'}
+                              </div>
+
+                              {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
+                              <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                                {cam.id === 'CAM_A_DIST_BOARD' ? (
+                                  streamData?.image ? (
+                                    <img
+                                      src={streamData.image}
+                                      alt="Realtime Cam Stream"
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    />
+                                  ) : (
+                                    <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center', fontSize: '12px' }}>
+                                      <span style={{ fontSize: '24px', display: 'block', animation: 'flash-slow 1s infinite alternate' }}>🎥</span>
+                                      正在讀取 A棟配電櫃 RTSP 串流...
+                                    </div>
+                                  )
+                                ) : (
+                                  renderSimulatedChannel(cam.id)
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          // 4, 9, 12 等多分割螢幕，按 slots 渲染
+                          const layoutLimit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+                          const slotsToRender = activeSlots.slice(0, layoutLimit);
+                          
+                          return slotsToRender.map((cameraId, slotIndex) => {
+                            const cam = cameras.find(c => c.id === cameraId) || cameras[0];
+                            const isSlotSelected = selectedSlotIndex === slotIndex;
+                            const isCH1Alarm = cam.id === 'CAM_A_DIST_BOARD' && (systemState.confirmed_fire || systemState.suspected_fire);
+                            const isSystemFaultCell = cam.id === 'CAM_A_DIST_BOARD' && systemState.system_fault;
+                            
+                            return (
+                              <div 
+                                key={`slot-${slotIndex}-${cam.id}`}
+                                onClick={() => {
+                                  setSelectedSlotIndex(slotIndex);
+                                  setSelectedCameraId(cam.id);
+                                  // 雙擊或再次點擊已選中的 slot 可以放大成單螢幕 (grid-1)
+                                  if (isSlotSelected) {
+                                    setScreenLayout('grid-1');
+                                  }
+                                }}
+                                className={`camera-cell ${isSlotSelected ? 'selected' : ''} ${isCH1Alarm ? 'alarm-active' : ''} ${isSystemFaultCell ? 'fault-active' : ''}`}
+                              >
+                                <div className="camera-static"></div>
+                                
+                                {/* OSD 頂部左側：支援點擊與下拉選單 */}
+                                <div className="camera-osd top-left" style={{ display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                                  <span style={{ fontWeight: 'bold', background: 'rgba(0, 0, 0, 0.5)', padding: '2px 6px', borderRadius: '3px' }}>
+                                    視窗 {slotIndex + 1}
+                                  </span>
+                                  <span style={{ textShadow: '1px 1px 2px #000', fontSize: '11px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {cam.name.split(' - ')[1] || cam.name}
+                                  </span>
+                                  <select
+                                    value={cam.id}
+                                    onChange={(e) => {
+                                      handleAssignCameraToSlot(slotIndex, e.target.value);
+                                    }}
+                                    style={{
+                                      background: 'rgba(22, 24, 29, 0.95)',
+                                      border: '1px solid var(--nvr-border)',
+                                      color: 'var(--nvr-text)',
+                                      fontSize: '10px',
+                                      padding: '1px 4px',
+                                      borderRadius: '3px',
+                                      cursor: 'pointer',
+                                      outline: 'none',
+                                      marginLeft: '2px',
+                                      pointerEvents: 'auto'
+                                    }}
+                                  >
+                                    {cameras.map(c => (
+                                      <option key={c.id} value={c.id}>
+                                        {c.name.split(' - ')[0] /* CH1, CH2等 */}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                
+                                <div className="camera-osd top-right">
+                                  {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
+                                  <span style={{ color: '#10b981' }}>● REC</span>
+                                </div>
+                                
+                                {/* OSD 底部標籤：時間與物理引擎簡短狀態 */}
+                                <div className="camera-osd bottom-left">{nvrTime}</div>
+                                <div className="camera-osd bottom-right" style={{ fontSize: '10px' }}>
+                                  {cam.id === 'CAM_A_DIST_BOARD' 
+                                    ? (systemState.confirmed_fire ? '🔥 ALARM TRIGGERED' : systemState.suspected_fire ? '⚠️ DETECTING FIRE...' : '🟢 SAFE') 
+                                    : '🟢 NORMAL'}
+                                </div>
+
+                                {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
+                                <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                                  {cam.id === 'CAM_A_DIST_BOARD' ? (
+                                    streamData?.image ? (
+                                      <img
+                                        src={streamData.image}
+                                        alt="Realtime Cam Stream"
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                      />
+                                    ) : (
+                                      <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center', fontSize: '12px' }}>
+                                        <span style={{ fontSize: '24px', display: 'block', animation: 'flash-slow 1s infinite alternate' }}>🎥</span>
+                                        正在讀取 A棟配電櫃 RTSP 串流...
+                                      </div>
+                                    )
+                                  ) : (
+                                    renderSimulatedChannel(cam.id)
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        }
+                      })()}
+                      
+                    </div>
+ 
                   </div>
-
+ 
                 </div>
 
                 {/* 底部電視牆控制控制列 (與照片一致) */}
