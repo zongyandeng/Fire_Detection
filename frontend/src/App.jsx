@@ -1831,7 +1831,7 @@ function App() {
                     <strong style={{ fontSize: '14px', color: 'var(--nvr-text)', display: 'block' }}>📹 目前已啟用攝影機清單 (已登記 {cameras.length} 台)</strong>
                     <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>支援即時刪減，電視牆將自動過濾被移除之通道</span>
                   </div>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  <div style={{ width: '100%' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--nvr-border)', color: 'var(--nvr-text-muted)', textAlign: 'left' }}>
