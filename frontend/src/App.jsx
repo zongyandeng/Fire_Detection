@@ -460,6 +460,10 @@ function App() {
     suspected_fire: false,
     confirmed_fire: false,
     countdown_remaining: 0.0,
+    countdown_limit: 10.0,
+    yolo_confidence_threshold: 0.45,
+    flicker_frequency_limit: 5.0,
+    shunt_trip_enabled: true,
     shunt_trip_triggered: false,
     system_fault: false,
     system_fault_reason: "",
@@ -471,6 +475,54 @@ function App() {
   
   const [activeMobileTab, setActiveMobileTab] = useState('discord'); // discord | email | line_tg
   const [overheatMode, setOverheatMode] = useState(false);
+  
+  // 系統設定專用前端編輯表單與儲存成功提示
+  const [settingsForm, setSettingsForm] = useState({
+    countdown_limit: 10.0,
+    yolo_confidence_threshold: 0.45,
+    flicker_frequency_limit: 5.0,
+    shunt_trip_enabled: true
+  });
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState("");
+
+  // 當 activeView 切換至 settings 時，以 systemState 的目前數值初始化編輯表單
+  useEffect(() => {
+    if (activeView === 'settings') {
+      setSettingsForm({
+        countdown_limit: systemState.countdown_limit || 10.0,
+        yolo_confidence_threshold: systemState.yolo_confidence_threshold || 0.45,
+        flicker_frequency_limit: systemState.flicker_frequency_limit || 5.0,
+        shunt_trip_enabled: systemState.shunt_trip_enabled !== undefined ? systemState.shunt_trip_enabled : true
+      });
+      setSaveSuccessMsg("");
+    }
+  }, [activeView, systemState.countdown_limit, systemState.yolo_confidence_threshold, systemState.flicker_frequency_limit, systemState.shunt_trip_enabled]);
+
+  const handleSaveSettings = () => {
+    fetch('http://127.0.0.1:8000/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settingsForm)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        setSystemState(prev => ({
+          ...prev,
+          countdown_limit: settingsForm.countdown_limit,
+          yolo_confidence_threshold: settingsForm.yolo_confidence_threshold,
+          flicker_frequency_limit: settingsForm.flicker_frequency_limit,
+          shunt_trip_enabled: settingsForm.shunt_trip_enabled
+        }));
+        setSaveSuccessMsg("✅ 設定已成功套用至 AI 影像分析引擎與硬體防禦模組！並已儲存持久化。");
+        setTimeout(() => setSaveSuccessMsg(""), 4000);
+      }
+    })
+    .catch(err => {
+      console.error("儲存設定失敗:", err);
+      alert("❌ 儲存設定失敗，請確認後端服務是否正常運作。");
+    });
+  };
   
   // ==================== 遙控與資訊監測新狀態 ====================
   const [isCoilTesting, setIsCoilTesting] = useState(false);
@@ -646,6 +698,10 @@ function App() {
           suspected_fire: data.state.suspected_fire,
           confirmed_fire: data.state.confirmed_fire,
           countdown_remaining: data.state.countdown_remaining,
+          countdown_limit: data.state.countdown_limit !== undefined ? data.state.countdown_limit : prev.countdown_limit,
+          yolo_confidence_threshold: data.state.yolo_confidence_threshold !== undefined ? data.state.yolo_confidence_threshold : prev.yolo_confidence_threshold,
+          flicker_frequency_limit: data.state.flicker_frequency_limit !== undefined ? data.state.flicker_frequency_limit : prev.flicker_frequency_limit,
+          shunt_trip_enabled: data.state.shunt_trip_enabled !== undefined ? data.state.shunt_trip_enabled : prev.shunt_trip_enabled,
           shunt_trip_triggered: data.state.shunt_trip_triggered,
           system_fault: data.state.system_fault,
           system_fault_reason: data.state.system_fault_reason,
@@ -677,7 +733,11 @@ function App() {
             negative_samples_count: data.negative_samples_count,
             alarm_logs: data.alarm_logs,
             throttling_fps: data.throttling_fps,
-            throttling_policy: data.throttling_policy || prev.throttling_policy
+            throttling_policy: data.throttling_policy || prev.throttling_policy,
+            countdown_limit: data.countdown_limit !== undefined ? data.countdown_limit : prev.countdown_limit,
+            yolo_confidence_threshold: data.yolo_confidence_threshold !== undefined ? data.yolo_confidence_threshold : prev.yolo_confidence_threshold,
+            flicker_frequency_limit: data.flicker_frequency_limit !== undefined ? data.flicker_frequency_limit : prev.flicker_frequency_limit,
+            shunt_trip_enabled: data.shunt_trip_enabled !== undefined ? data.shunt_trip_enabled : prev.shunt_trip_enabled
           }));
         })
         .catch(err => console.error("拉取系統狀態失敗:", err));
@@ -2775,36 +2835,93 @@ function App() {
                     <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
                   </div>
 
+                  {/* 顯示成功儲存 Toast 提示 */}
+                  {saveSuccessMsg && (
+                    <div style={{ 
+                      padding: '12px 15px', 
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)', 
+                      color: 'var(--normal-green)', 
+                      border: '1px solid var(--normal-green)', 
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      animation: 'flash-slow 1s alternate infinite'
+                    }}>
+                      {saveSuccessMsg}
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div>
                       <label className="nvr-label">🚨 無人值守自動判定起火倒數時間</label>
-                      <select className="nvr-input">
-                        <option>10 秒 (黃金搶救時間 - POC預設)</option>
-                        <option>30 秒</option>
-                        <option>60 秒</option>
-                        <option>120 秒</option>
+                      <select 
+                        className="nvr-input"
+                        value={settingsForm.countdown_limit}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, countdown_limit: parseFloat(e.target.value) })}
+                      >
+                        <option value={10}>10 秒 (黃金搶救時間 - POC預設)</option>
+                        <option value={30}>30 秒</option>
+                        <option value={60}>60 秒</option>
+                        <option value={120}>120 秒</option>
                       </select>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                       <div>
                         <label className="nvr-label">YOLO 明火置信度門檻 (Confidence)</label>
-                        <input type="number" step="0.05" defaultValue="0.45" className="nvr-input" />
+                        <input 
+                          type="number" 
+                          step="0.05" 
+                          min="0.10"
+                          max="0.95"
+                          value={settingsForm.yolo_confidence_threshold}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, yolo_confidence_threshold: parseFloat(e.target.value) || 0.45 })}
+                          className="nvr-input" 
+                        />
                       </div>
                       <div>
                         <label className="nvr-label">火焰閃爍頻率閾值 (Flicker Limit)</label>
-                        <input type="number" step="0.5" defaultValue="5.0" className="nvr-input" />
+                        <input 
+                          type="number" 
+                          step="0.5" 
+                          min="1.0"
+                          max="15.0"
+                          value={settingsForm.flicker_frequency_limit}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, flicker_frequency_limit: parseFloat(e.target.value) || 5.0 })}
+                          className="nvr-input" 
+                        />
                       </div>
                     </div>
 
                     <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        <input type="checkbox" defaultChecked /> 啟用分勵脫扣器 (Shunt Trip) 自動切斷電源防護
+                        <input 
+                          type="checkbox" 
+                          checked={settingsForm.shunt_trip_enabled}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, shunt_trip_enabled: e.target.checked })}
+                        /> 啟用分勵脫扣器 (Shunt Trip) 自動切斷電源防護
                       </label>
                       <p style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', marginTop: '5px', paddingLeft: '22px' }}>
                         ※ 安全聲明：啟用後，若無人值守倒數歸零，NVR 將直接對繼電器輸出訊號，強制切斷配電櫃總閘，防範火勢蔓延。
                       </p>
                     </div>
+
+                    <button 
+                      onClick={handleSaveSettings}
+                      className="nvr-btn" 
+                      style={{ 
+                        marginTop: '10px', 
+                        padding: '12px', 
+                        backgroundColor: 'var(--nvr-border-focus)', 
+                        borderColor: 'var(--nvr-border-focus)', 
+                        color: '#fff', 
+                        fontWeight: 'bold',
+                        fontSize: '13px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      💾 儲存並套用 AI 與硬體防禦連動參數
+                    </button>
                   </div>
                 </div>
 

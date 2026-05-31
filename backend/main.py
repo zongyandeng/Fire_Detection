@@ -68,6 +68,12 @@ class SystemState:
         self.countdown_remaining = 0.0   # 自動通報剩餘倒數秒數
         self.shunt_trip_triggered = False # 分勵脫扣器 (斷電) 狀態
         
+        # AI 與連動設定參數，有預設值，後續會被持久化載入覆蓋
+        self.countdown_limit = 10.0
+        self.yolo_confidence_threshold = 0.45
+        self.flicker_frequency_limit = 5.0
+        self.shunt_trip_enabled = True
+        
         # 心跳與系統故障狀態
         self.last_heartbeat_time = time.time()
         self.system_fault = False
@@ -98,9 +104,14 @@ class SystemState:
                     data = json.load(f)
                     self.alarm_logs = data.get("alarm_logs", [])
                     self.negative_samples_count = data.get("negative_samples_count", 0)
-                print(f"💾 [持久化] 成功從硬碟載入 {len(self.alarm_logs)} 筆歷史告警日誌與 {self.negative_samples_count} 個負樣本計數。")
+                    # 載入持久化設定，如果檔案中沒有則維持預設值
+                    self.countdown_limit = data.get("countdown_limit", 10.0)
+                    self.yolo_confidence_threshold = data.get("yolo_confidence_threshold", 0.45)
+                    self.flicker_frequency_limit = data.get("flicker_frequency_limit", 5.0)
+                    self.shunt_trip_enabled = data.get("shunt_trip_enabled", True)
+                print(f"💾 [持久化] 成功從硬碟載入 {len(self.alarm_logs)} 筆歷史告警日誌、{self.negative_samples_count} 個負樣本計數，以及系統設定值。")
             except Exception as e:
-                print(f"⚠️ [持久化] 載入歷史日誌失敗: {e}")
+                print(f"⚠️ [持久化] 載入歷史日誌與設定失敗: {e}")
                 self.alarm_logs = []
                 self.negative_samples_count = 0
 
@@ -112,13 +123,20 @@ class SystemState:
             with open(log_file, "w", encoding="utf-8") as f:
                 json.dump({
                     "alarm_logs": self.alarm_logs,
-                    "negative_samples_count": self.negative_samples_count
+                    "negative_samples_count": self.negative_samples_count,
+                    "countdown_limit": self.countdown_limit,
+                    "yolo_confidence_threshold": self.yolo_confidence_threshold,
+                    "flicker_frequency_limit": self.flicker_frequency_limit,
+                    "shunt_trip_enabled": self.shunt_trip_enabled
                 }, f, ensure_ascii=False, indent=4)
-            print("💾 [持久化] 成功同步最新日誌與負樣本數據至硬碟。")
+            print("💾 [持久化] 成功同步最新日誌、負樣本數據與系統設定至硬碟。")
         except Exception as e:
-            print(f"⚠️ [持久化] 寫入歷史日誌失敗: {e}")
+            print(f"⚠️ [持久化] 寫入歷史日誌與設定失敗: {e}")
 
 sys_state = SystemState()
+# 同步持久化設定到 AI detector 中
+detector.yolo_confidence_threshold = sys_state.yolo_confidence_threshold
+detector.flicker_frequency_limit = sys_state.flicker_frequency_limit
 state_lock = threading.Lock()
 
 # 緩存的 WebSocket 連線列表
@@ -234,11 +252,11 @@ def video_inference_loop():
             # 狀態機管理 (三合一響應與倒數)
             if result["triggered"]:
                 if not sys_state.suspected_fire and not sys_state.confirmed_fire:
-                    # 剛觸發疑似火警
+                    # 剛觸發疑似火警，讀取動態設定的倒數上限
                     sys_state.suspected_fire = True
-                    sys_state.countdown_remaining = 10.0
+                    sys_state.countdown_remaining = sys_state.countdown_limit
                     countdown_start_time = time.time()
-                    print("🚨 [狀態機] 檢測到疑似火警！啟動 10 秒無人值守倒數計時...")
+                    print(f"🚨 [狀態機] 檢測到疑似火警！啟動 {sys_state.countdown_limit} 秒無人值守倒數計時...")
             else:
                 # 警報解除（未達觸發門檻，且尚未確認火災時）
                 if sys_state.suspected_fire and not sys_state.confirmed_fire:
@@ -250,13 +268,19 @@ def video_inference_loop():
             # 倒數計時更新
             if sys_state.suspected_fire and not sys_state.confirmed_fire and countdown_start_time is not None:
                 passed = time.time() - countdown_start_time
-                sys_state.countdown_remaining = max(0.0, 10.0 - passed)
+                sys_state.countdown_remaining = max(0.0, sys_state.countdown_limit - passed)
                 
-                # 10 秒倒數結束，自動判定為真實火警 (無人值守自動通報機制細節)
+                # 倒數結束，自動判定為真實火警 (無人值守自動通報機制細節)
                 if sys_state.countdown_remaining <= 0.0:
                     sys_state.confirmed_fire = True
                     sys_state.suspected_fire = False
-                    sys_state.shunt_trip_triggered = True # 自動分勵脫扣器切斷電源
+                    # 根據動態設定，決定是否自動觸發分勵脫扣器切斷供電
+                    if sys_state.shunt_trip_enabled:
+                        sys_state.shunt_trip_triggered = True
+                        print("⚡ [狀態機] 倒數歸零，已啟用分勵脫扣器自動斷電防禦！")
+                    else:
+                        sys_state.shunt_trip_triggered = False
+                        print("⚠️ [狀態機] 倒數歸零，未啟用分勵脫扣器斷電連動，僅發送多軌火警通報！")
                     countdown_start_time = None
                     
                     # 產生報警截圖
@@ -339,6 +363,10 @@ def get_system_state():
             "suspected_fire": sys_state.suspected_fire,
             "confirmed_fire": sys_state.confirmed_fire,
             "countdown_remaining": round(sys_state.countdown_remaining, 1),
+            "countdown_limit": sys_state.countdown_limit,
+            "yolo_confidence_threshold": sys_state.yolo_confidence_threshold,
+            "flicker_frequency_limit": sys_state.flicker_frequency_limit,
+            "shunt_trip_enabled": sys_state.shunt_trip_enabled,
             "shunt_trip_triggered": sys_state.shunt_trip_triggered,
             "system_fault": sys_state.system_fault,
             "system_fault_reason": sys_state.system_fault_reason,
@@ -448,6 +476,12 @@ class PolicyRequest(BaseModel):
 class ShuntTripRequest(BaseModel):
     action: str # "trip", "reset", "test"
 
+class SettingsRequest(BaseModel):
+    countdown_limit: float
+    yolo_confidence_threshold: float
+    flicker_frequency_limit: float
+    shunt_trip_enabled: bool
+
 @app.post("/api/telemetry/fan")
 def post_fan_control(req: FanRequest):
     telemetry.set_fan_control(req.mode, req.speed)
@@ -506,6 +540,25 @@ def post_shunt_trip_control(req: ShuntTripRequest):
         else:
             raise HTTPException(status_code=400, detail="Invalid action")
 
+@app.post("/api/settings")
+def post_settings(req: SettingsRequest):
+    """更新 AI 與硬體防禦連動參數"""
+    with state_lock:
+        sys_state.countdown_limit = req.countdown_limit
+        sys_state.yolo_confidence_threshold = req.yolo_confidence_threshold
+        sys_state.flicker_frequency_limit = req.flicker_frequency_limit
+        sys_state.shunt_trip_enabled = req.shunt_trip_enabled
+        
+        # 即時將參數更新至 detector 引擎
+        detector.yolo_confidence_threshold = req.yolo_confidence_threshold
+        detector.flicker_frequency_limit = req.flicker_frequency_limit
+        
+        # 將新設定存入硬碟以達到持久化
+        sys_state.save_persisted_data()
+        
+        print(f"⚙️ [設定更新] 成功！倒數上限: {req.countdown_limit}s, 置信度: {req.yolo_confidence_threshold}, 頻率門檻: {req.flicker_frequency_limit}Hz, 脫扣連動: {req.shunt_trip_enabled}")
+        return {"status": "success", "msg": "設定已成功套用與持久化"}
+
 
 # --- WebSocket WebSocket 串流傳輸 (傳輸實時畫面與物理特徵元數據) ---
 
@@ -538,6 +591,10 @@ async def websocket_stream(websocket: WebSocket):
                         "suspected_fire": sys_state.suspected_fire,
                         "confirmed_fire": sys_state.confirmed_fire,
                         "countdown_remaining": round(sys_state.countdown_remaining, 1),
+                        "countdown_limit": sys_state.countdown_limit,
+                        "yolo_confidence_threshold": sys_state.yolo_confidence_threshold,
+                        "flicker_frequency_limit": sys_state.flicker_frequency_limit,
+                        "shunt_trip_enabled": sys_state.shunt_trip_enabled,
                         "shunt_trip_triggered": sys_state.shunt_trip_triggered,
                         "system_fault": sys_state.system_fault,
                         "system_fault_reason": sys_state.system_fault_reason,

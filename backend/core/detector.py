@@ -21,6 +21,10 @@ class IndustrialFireDetector:
         self.positive_threshold = 30
         self.frame_buffer = deque(maxlen=self.rolling_window_size)
         
+        # AI 與連動設定參數，可由後端動態調整
+        self.yolo_confidence_threshold = 0.45
+        self.flicker_frequency_limit = 5.0
+        
         # 火焰與煙霧歷史特徵快取 (用於頻率與時空分析)
         self.flame_intensity_history = deque(maxlen=15) # 1秒快取
         self.smoke_history = deque(maxlen=45) # 3秒時空快取
@@ -113,8 +117,8 @@ class IndustrialFireDetector:
             obs_time = len(self.flame_intensity_history) / 15.0
             flicker_freq = crossings / (2.0 * obs_time)
             
-            # 工業火焰閃爍頻率標準: 5Hz ~ 10Hz
-            flicker_passed = 4.0 <= flicker_freq <= 11.0
+            # 工業火焰閃爍頻率標準，低限改為動態參數
+            flicker_passed = self.flicker_frequency_limit <= flicker_freq <= 11.0
             
         # 綜合評定
         passed = color_passed and (geometry_passed or flicker_passed)
@@ -258,7 +262,7 @@ class IndustrialFireDetector:
                             
                         # 混合模式：在 POC 階段，只要 YOLO 抓到候選框且置信度高，我們便保留它，
                         # 並結合物理特徵來綜合判定，防止反光背心等誤報
-                        if passed and conf > 0.35:
+                        if passed and conf >= self.yolo_confidence_threshold:
                             is_frame_positive = True
                             max_confidence = max(max_confidence, conf)
                             detections.append({
