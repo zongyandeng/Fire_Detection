@@ -1736,7 +1736,7 @@ function App() {
 
             {/* ================= SPA 畫面 4: 新增攝影機 (Add Camera) ================= */}
             {activeView === 'add_camera' && (
-              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+              <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
                 <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
                   <strong style={{ fontSize: '16px' }}>➕ 新增與管理工廠攝影機通道 (Camera Provisioning)</strong>
                   <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
