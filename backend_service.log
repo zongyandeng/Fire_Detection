@@ -1,0 +1,1141 @@
+正在載入 YOLO 偵測模型: D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\models\yolov8n.pt
+未安裝 pynvml 函式庫，將切換為系統遙測模擬。
+💾 儲存額度管理器已啟動。目錄: D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\alarms，上限: 30.0 MB
+🚀 [Background Loop] 啟動影像擷取與 AI 推理執行緒。
+🚀 [Background Loop] 啟動系統心跳監控執行緒 (60 秒超時監測)。
+🔥 工業級 NVR AI 火災偵測後端服務啟動中...
+INFO:     Started server process [3272]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50079 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🎥 工廠影像串流已啟動。影片路徑: D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\videos\factory_fire_test.mp4，目標: 15 FPS
+🚨 [狀態機] 檢測到疑似火警！啟動 10 秒無人值守倒數計時...
+🚨 [無人值守自動通報] 火警已自動確認！已儲存截圖至 D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\alarms\alarm_20260531_132214.jpg
+📧 [Email 通報] 正在發送火警警告郵件至 factory-admin@example.com...
+💡 提示: 未配置 SMTP_USER 或 SMTP_PASSWORD。以下是即將發送的 Email 內容（已模擬成功）：
+   - 收件人: factory-admin@example.com
+   - 主旨: 🚨 【緊急警報】工業 AI 火災偵測系統 - 檢測到火災/煙霧！
+   - 內容: 相機ID: A棟配電櫃-百葉窗通風口 | 時間: 2026-05-31 13:22:14 | 置信度: 88.0% | 附圖路徑: D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\alarms\alarm_20260531_132214.jpg
+💬 [Discord 通報] 正在發送警報卡片至 Discord...
+💡 提示: 未配置 DISCORD_WEBHOOK_URL。以下是即將發送的 Discord Embed 卡片內容（已模擬成功）：
+   [Discord Embed Card]
+   - Title: 🚨 工業 AI 火災與煙霧警報 (無人值守自動確認)
+   - Color: Red (#FF0055)
+   - Fields: [相機位置: A棟配電櫃-百葉窗通風口], [時間: 2026-05-31 13:22:14], [置信度: 88.0%]
+   - Actions: [模擬 Shunt Trip: 已切斷電源], [快速連結: http://localhost:5173]
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:64083 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62855 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63139 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:65221 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+⚠️ [System Fault] 偵測到系統故障: NVR/I/O 監控模組心跳中斷 (已逾時 60.0 秒未收到訊號)，正在發送警告...
+⚠️ [SYSTEM FAULT] 觸發系統離線故障！原因: NVR/I/O 監控模組心跳中斷 (已逾時 60.0 秒未收到訊號)
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61846 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+🟢 [心跳復原] 收到監控模組心跳，系統狀態恢復正常。
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65465 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+INFO:     connection closed
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51137 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+Exception in thread Thread-1 (video_inference_loop):
+Traceback (most recent call last):
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\MyDesktop\antigravity2.0\Fire_Detection\backend\main.py", line 184, in video_inference_loop
+    "triggered": result["triggered"],
+                 ~~~~~~^^^^^^^^^^^^^
+KeyError: 'triggered'
+🌓 [瞬態過濾] 檢測到全域亮度劇變 (差異: 50.3)，暫停判定 3 秒。
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54443 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+📁 [負樣本儲存] 已將此誤報影格儲存至 D:\MyDesktop\antigravity2.0\Fire_Detection\backend\data\negative_samples\neg_20260531_133223.jpg (用於二次微調)
+INFO:     127.0.0.1:57561 - "POST /api/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:50060 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:57561 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51389 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50374 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50344 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51313 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:53849 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:61865 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:55043 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49551 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64646 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60715 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58682 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57080 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:62518 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63460 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57370 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50723 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59147 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59147 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56998 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56998 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:52787 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:56998 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52540 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+INFO:     connection closed
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61682 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+ERROR:    keepalive ping failed
+Traceback (most recent call last):
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 1233, in keepalive_ping
+    pong_waiter = await self.ping()
+                  ^^^^^^^^^^^^^^^^^
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 843, in ping
+    await self.write_frame(True, OP_PING, data)
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 1184, in write_frame
+    await self.drain()
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 1167, in drain
+    await self._drain()
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 328, in _drain
+    await self._drain_helper()
+  File "C:\Users\Edison\AppData\Local\Programs\Python\Python312\Lib\site-packages\websockets\legacy\protocol.py", line 308, in _drain_helper
+    assert waiter is None or waiter.cancelled()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57059 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50732 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55549 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55549 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55549 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55549 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56509 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52562 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58424 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58424 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58424 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65441 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54844 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62784 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50574 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64953 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58635 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53234 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53234 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:60394 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+INFO:     connection closed
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:53234 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52344 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49265 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51117 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57550 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60594 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50490 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63954 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:52225 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49237 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:63954 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61295 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50961 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51544 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:59955 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:55347 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62173 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+🔌 [WebSocket] 前端儀表板連線已中斷。
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64448 - "WebSocket /ws/stream" [accepted]
+INFO:     connection open
+🔌 [WebSocket] 前端儀表板成功連線影音與數據通道。
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60895 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "POST /api/heartbeat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56579 - "GET /api/state HTTP/1.1" 200 OK

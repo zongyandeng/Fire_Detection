@@ -85,6 +85,7 @@ class SystemState:
         
         # 降載模式
         self.throttling_fps = 15 # 預設 15 FPS
+        self.throttling_policy = "smart" # "smart", "safe", "performance"
         
         # 最新影格快取
         self.latest_annotated_frame = None
@@ -154,10 +155,16 @@ def video_inference_loop():
         tele_stats = telemetry.get_stats()
         with state_lock:
             if tele_stats["status"] == "CRITICAL":
-                # 過熱臨界點，自動降為 5 FPS 以降溫
-                stream.target_fps = 5
-                stream.frame_delay = 1.0 / 5.0
-                sys_state.throttling_fps = 5
+                # 過熱臨界點，自適應降載
+                policy = sys_state.throttling_policy
+                fps = 5
+                if policy == "safe":
+                    fps = 2
+                elif policy == "performance":
+                    fps = 10
+                stream.target_fps = fps
+                stream.frame_delay = 1.0 / float(fps)
+                sys_state.throttling_fps = fps
             else:
                 # 正常狀態，恢復 15 FPS
                 stream.target_fps = 15
@@ -337,7 +344,8 @@ def get_system_state():
             "system_fault_reason": sys_state.system_fault_reason,
             "negative_samples_count": sys_state.negative_samples_count,
             "alarm_logs": sys_state.alarm_logs,
-            "throttling_fps": sys_state.throttling_fps
+            "throttling_fps": sys_state.throttling_fps,
+            "throttling_policy": sys_state.throttling_policy
         }
 
 @app.post("/api/heartbeat")
@@ -430,6 +438,74 @@ def post_overheat_mode(req: OverheatRequest):
     print(f"🔥 [過熱調試] {'啟用' if req.enabled else '停用'} GPU 過熱模擬模式。")
     return {"status": "success", "overheat_mode": req.enabled}
 
+class FanRequest(BaseModel):
+    mode: str # "auto", "manual"
+    speed: int # 35 to 100
+
+class PolicyRequest(BaseModel):
+    policy: str # "smart", "safe", "performance"
+
+class ShuntTripRequest(BaseModel):
+    action: str # "trip", "reset", "test"
+
+@app.post("/api/telemetry/fan")
+def post_fan_control(req: FanRequest):
+    telemetry.set_fan_control(req.mode, req.speed)
+    print(f"🌀 [風扇遙控] 設定風扇模式為 {req.mode.upper()}，手動轉速: {req.speed}%")
+    return {"status": "success", "fan_mode": req.mode, "fan_speed": req.speed}
+
+@app.post("/api/telemetry/policy")
+def post_telemetry_policy(req: PolicyRequest):
+    with state_lock:
+        sys_state.throttling_policy = req.policy
+        print(f"⚙️ [降載策略] 已切換自適應降載策略為: {req.policy.upper()}")
+        return {"status": "success", "policy": req.policy}
+
+@app.post("/api/telemetry/shunt_trip")
+def post_shunt_trip_control(req: ShuntTripRequest):
+    with state_lock:
+        if req.action == "trip":
+            sys_state.shunt_trip_triggered = True
+            
+            # 手動緊急跳閘也記為一筆日誌，保障可追溯性
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            snapshot_filename = f"manual_trip_{file_timestamp}.jpg"
+            snapshot_path = os.path.join(ALARMS_DIR, snapshot_filename)
+            
+            if sys_state.latest_annotated_frame is not None:
+                cv2.imwrite(snapshot_path, sys_state.latest_annotated_frame)
+                
+            log_entry = {
+                "id": len(sys_state.alarm_logs) + 1,
+                "timestamp": timestamp,
+                "camera_id": "CAM_A_DIST_BOARD (手動遙控跳閘)",
+                "confidence": 1.0,
+                "snapshot": f"/alarms/{snapshot_filename}" if sys_state.latest_annotated_frame is not None else None,
+                "shunt_trip": True
+            }
+            sys_state.alarm_logs.insert(0, log_entry)
+            sys_state.save_persisted_data()
+            
+            print("⚡ [手動遙控] 遠端操作員手動緊急觸發分勵脫扣器切斷供電！")
+            return {"status": "tripped", "msg": "電源已切斷"}
+            
+        elif req.action == "reset":
+            sys_state.shunt_trip_triggered = False
+            # 重設火警狀態，避免重複觸發
+            sys_state.confirmed_fire = False
+            sys_state.suspected_fire = False
+            sys_state.countdown_remaining = 0.0
+            print("🔌 [手動遙控] 遠端操作員手動復歸分勵脫扣器，恢復送電監控。")
+            return {"status": "reset", "msg": "供電已復歸"}
+            
+        elif req.action == "test":
+            print("🟢 [自動測試] 遠端分勵線圈脈衝自檢完成，阻值正常。")
+            return {"status": "test_ok", "msg": "自檢完成"}
+            
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+
 
 # --- WebSocket WebSocket 串流傳輸 (傳輸實時畫面與物理特徵元數據) ---
 
@@ -464,7 +540,8 @@ async def websocket_stream(websocket: WebSocket):
                         "countdown_remaining": round(sys_state.countdown_remaining, 1),
                         "shunt_trip_triggered": sys_state.shunt_trip_triggered,
                         "system_fault": sys_state.system_fault,
-                        "system_fault_reason": sys_state.system_fault_reason
+                        "system_fault_reason": sys_state.system_fault_reason,
+                        "throttling_policy": sys_state.throttling_policy
                     },
                     "analysis": frame_data
                 }

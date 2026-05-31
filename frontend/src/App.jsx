@@ -465,11 +465,97 @@ function App() {
     system_fault_reason: "",
     negative_samples_count: 0,
     alarm_logs: [],
-    throttling_fps: 15
+    throttling_fps: 15,
+    throttling_policy: 'smart'
   });
   
   const [activeMobileTab, setActiveMobileTab] = useState('discord'); // discord | email | line_tg
   const [overheatMode, setOverheatMode] = useState(false);
+  
+  // ==================== 遙控與資訊監測新狀態 ====================
+  const [isCoilTesting, setIsCoilTesting] = useState(false);
+  const [coilTestProgress, setCoilTestProgress] = useState(0);
+  const [coilTestResult, setCoilTestResult] = useState('unknown'); // unknown | testing | success | failed
+
+  // 物理特徵波形歷史緩衝區（各保留30點以繪製示波器）
+  const flameHistoryRef = useRef(Array.from({ length: 30 }, () => 0.0));
+  const smokeHistoryRef = useRef(Array.from({ length: 30 }, () => 0.0));
+  const flameCanvasRef = useRef(null);
+  const smokeCanvasRef = useRef(null);
+
+  const handleSetFanControl = (mode, speed) => {
+    fetch('http://127.0.0.1:8000/api/telemetry/fan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, speed: parseInt(speed) })
+    })
+    .catch(err => console.error("設定風扇控制失敗:", err));
+  };
+
+  const handleSetThrottlingPolicy = (policy) => {
+    fetch('http://127.0.0.1:8000/api/telemetry/policy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ policy })
+    })
+    .catch(err => console.error("設定降載策略失敗:", err));
+  };
+
+  const handleShuntTripControl = (action) => {
+    if (action === 'trip') {
+      if (!confirm("⚠️ 安全警告：此操作將強行跳閘配電櫃主電源，切斷高壓供電！\n您確定要立即發送分勵脈衝，進行手動緊急斷電防禦嗎？")) {
+        return;
+      }
+    }
+    
+    if (action === 'test') {
+      setIsCoilTesting(true);
+      setCoilTestProgress(0);
+      setCoilTestResult('testing');
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setCoilTestProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          fetch('http://127.0.0.1:8000/api/telemetry/shunt_trip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'test' })
+          })
+          .then(res => res.json())
+          .then(data => {
+            setIsCoilTesting(false);
+            setCoilTestResult('success');
+          })
+          .catch(err => {
+            setIsCoilTesting(false);
+            setCoilTestResult('failed');
+            alert("❌ 線圈脈衝檢測失敗，請檢查繼電器接腳通訊。");
+          });
+        }
+      }, 150);
+      return;
+    }
+
+    fetch('http://127.0.0.1:8000/api/telemetry/shunt_trip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (action === 'trip') {
+        alert("⚡ 手動緊急跳閘完成，供電已強制切斷！");
+      } else if (action === 'reset') {
+        alert("🔌 分勵脫扣器已手動復歸，供電正常送電監控中。");
+      }
+    })
+    .catch(err => alert("遠端遙控失敗，請確認後端服務是否正常。"));
+  };
+  // =============================================================
+  
   const [wsConnected, setWsConnected] = useState(false);
   const [isPowerCycling, setIsPowerCycling] = useState(false); // 重啟 NVR 伺服器狀態
   
@@ -540,6 +626,20 @@ function App() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setStreamData(data);
+      
+      // 更新示波器歷史緩衝區 (30點歷史)
+      const activeDets = data.analysis?.detections || [];
+      const flameDet = activeDets.find(d => d.type === 'flame');
+      const smokeDet = activeDets.find(d => d.type === 'smoke');
+      
+      // 火焰閃爍頻率歷史
+      const currentFlameVal = flameDet ? flameDet.stats?.flicker_freq || 0.0 : 0.0;
+      flameHistoryRef.current = [...flameHistoryRef.current.slice(1), currentFlameVal];
+      
+      // 煙霧背景清晰度損失歷史
+      const currentSmokeVal = smokeDet ? smokeDet.stats?.clarity_loss || 0.0 : 0.0;
+      smokeHistoryRef.current = [...smokeHistoryRef.current.slice(1), currentSmokeVal];
+
       if (data.state) {
         setSystemState(prev => ({
           ...prev,
@@ -548,7 +648,8 @@ function App() {
           countdown_remaining: data.state.countdown_remaining,
           shunt_trip_triggered: data.state.shunt_trip_triggered,
           system_fault: data.state.system_fault,
-          system_fault_reason: data.state.system_fault_reason
+          system_fault_reason: data.state.system_fault_reason,
+          throttling_policy: data.state.throttling_policy || prev.throttling_policy
         }));
       }
     };
@@ -575,7 +676,8 @@ function App() {
             ...prev,
             negative_samples_count: data.negative_samples_count,
             alarm_logs: data.alarm_logs,
-            throttling_fps: data.throttling_fps
+            throttling_fps: data.throttling_fps,
+            throttling_policy: data.throttling_policy || prev.throttling_policy
           }));
         })
         .catch(err => console.error("拉取系統狀態失敗:", err));
@@ -585,6 +687,195 @@ function App() {
     const interval = setInterval(fetchState, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // ==================== 實時 Canvas 示波器繪製 Effect ====================
+  useEffect(() => {
+    if (activeView !== 'information') return;
+
+    let animationFrameId;
+    
+    const drawScope = () => {
+      // 1. 繪製火焰示波器
+      const flameCanvas = flameCanvasRef.current;
+      if (flameCanvas) {
+        const rect = flameCanvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        flameCanvas.width = rect.width * dpr;
+        flameCanvas.height = rect.height * dpr;
+        
+        const ctx = flameCanvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const w = rect.width;
+        const h = rect.height;
+        
+        // 背景塗黑
+        ctx.fillStyle = '#06080b';
+        ctx.fillRect(0, 0, w, h);
+        
+        // 繪製網格
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 25) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 20) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+        
+        // 繪製 5Hz - 10Hz 的黃金判定區間帶
+        const getFlameY = (val) => {
+          const minVal = 0;
+          const maxVal = 12; // 最大 12Hz
+          const ratio = (val - minVal) / (maxVal - minVal);
+          return h - 15 - ratio * (h - 30);
+        };
+        
+        const y5 = getFlameY(5);
+        const y10 = getFlameY(10);
+        ctx.fillStyle = 'rgba(255, 102, 0, 0.06)';
+        ctx.fillRect(0, y10, w, y5 - y10);
+        
+        ctx.strokeStyle = 'rgba(255, 102, 0, 0.2)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, y5); ctx.lineTo(w, y5);
+        ctx.moveTo(0, y10); ctx.lineTo(w, y10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = 'rgba(255, 102, 0, 0.6)';
+        ctx.font = '10px monospace';
+        ctx.fillText('🔥 明火判定特徵黃金頻率帶 (5Hz - 10Hz)', 10, y5 - 5);
+        
+        // 繪製火焰閃爍頻率折線
+        const pts = flameHistoryRef.current || [];
+        if (pts.length > 1) {
+          ctx.beginPath();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#ff5533';
+          ctx.shadowColor = 'rgba(255, 85, 51, 0.4)';
+          ctx.shadowBlur = 8;
+          
+          for (let i = 0; i < pts.length; i++) {
+            const x = (i / (pts.length - 1)) * (w - 30) + 15;
+            const y = getFlameY(pts[i]);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0; // 重置
+          
+          // 繪製下方漸層填滿
+          ctx.lineTo((w - 15), h);
+          ctx.lineTo(15, h);
+          ctx.closePath();
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, 'rgba(255, 85, 51, 0.08)');
+          grad.addColorStop(1, 'rgba(255, 85, 51, 0.0)');
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
+      }
+      
+      // 2. 繪製煙霧示波器
+      const smokeCanvas = smokeCanvasRef.current;
+      if (smokeCanvas) {
+        const rect = smokeCanvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        smokeCanvas.width = rect.width * dpr;
+        smokeCanvas.height = rect.height * dpr;
+        
+        const ctx = smokeCanvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const w = rect.width;
+        const h = rect.height;
+        
+        // 背景塗黑
+        ctx.fillStyle = '#06080b';
+        ctx.fillRect(0, 0, w, h);
+        
+        // 繪製網格
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 25) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 20) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+        
+        const getSmokeY = (val) => {
+          const minVal = 0;
+          const maxVal = 1.0;
+          const ratio = (val - minVal) / (maxVal - minVal);
+          return h - 15 - ratio * (h - 30);
+        };
+        
+        // 繪製 60% 清晰度損失警報線
+        const yAlarm = getSmokeY(0.6);
+        ctx.strokeStyle = 'rgba(0, 162, 255, 0.2)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(0, yAlarm); ctx.lineTo(w, yAlarm);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = 'rgba(0, 162, 255, 0.6)';
+        ctx.font = '10px monospace';
+        ctx.fillText('☁️ 煙霧背景模糊臨界警告線 (60%)', 10, yAlarm - 5);
+        
+        // 繪製煙霧清晰度損失折線
+        const pts = smokeHistoryRef.current || [];
+        if (pts.length > 1) {
+          ctx.beginPath();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#00bbff';
+          ctx.shadowColor = 'rgba(0, 187, 255, 0.4)';
+          ctx.shadowBlur = 8;
+          
+          for (let i = 0; i < pts.length; i++) {
+            const x = (i / (pts.length - 1)) * (w - 30) + 15;
+            const y = getSmokeY(pts[i]);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0; // 重置
+          
+          // 繪製下方漸層填滿
+          ctx.lineTo((w - 15), h);
+          ctx.lineTo(15, h);
+          ctx.closePath();
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, 'rgba(0, 187, 255, 0.08)');
+          grad.addColorStop(1, 'rgba(0, 187, 255, 0.0)');
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
+      }
+      
+      animationFrameId = requestAnimationFrame(drawScope);
+    };
+    
+    // 啟動動畫
+    drawScope();
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [activeView]);
 
   // 4. API 控制：手動確認與排除
   const handleConfirmFire = () => {
@@ -2195,124 +2486,281 @@ function App() {
 
             {/* ================= SPA 畫面 6: 遙測與物理特徵資訊 (Information) ================= */}
             {activeView === 'information' && (
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', overflowY: 'auto', paddingRight: '5px' }}>
                 
-                {/* 左側：GPU 遙測與自適應降載保護 */}
-                <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                    <strong style={{ fontSize: '15px' }}>🌀 GPU 顯示卡狀態與自適應降載保護</strong>
-                    <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '2px 8px', fontSize: '11px' }}>主選單 🏠</button>
+                {/* 頂部資訊條 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    🌀 遙測資訊與工業安全防禦中心 <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px' }}>Telemetry & Active Defense</span>
+                  </span>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 12px', fontSize: '11px' }}>返回主選單 🏠</button>
+                </div>
+
+                {/* 響應式自適應網格版面 (防擠壓，在大螢幕會雙欄並排，在窄視窗會自動垂直排列) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px', width: '100%' }}>
+                  
+                  {/* ================= 左側控制區 ================= */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    
+                    {/* 卡片一：GPU 核心健康遙測與自適應降載保護 */}
+                    <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', background: 'rgba(9, 10, 12, 0.45)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '13px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>🌀 GPU 顯示卡狀態與自適應降載保護</strong>
+                        <button 
+                          onClick={handleToggleOverheat}
+                          className="nvr-btn"
+                          style={{ fontSize: '10px', padding: '3px 8px', backgroundColor: overheatMode ? 'rgba(255, 51, 102, 0.2)' : 'rgba(255,255,255,0.05)', borderColor: overheatMode ? 'var(--alarm-red)' : 'var(--nvr-border)', color: overheatMode ? 'var(--alarm-red)' : '#fff' }}
+                        >
+                          {overheatMode ? '🔥 關閉核心過熱模擬' : '⚡ 模擬顯示卡過熱降載'}
+                        </button>
+                      </div>
+
+                      {/* 四格即時遙測 */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div className="nvr-panel" style={{ padding: '10px 15px', background: '#06080b', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '2px' }}>GPU 核心溫度</span>
+                          <strong style={{ fontSize: '20px', color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : latestTelemetry.status === 'WARNING' ? 'var(--alarm-yellow)' : '#fff' }}>
+                            {latestTelemetry.temperature} °C
+                          </strong>
+                        </div>
+                        <div className="nvr-panel" style={{ padding: '10px 15px', background: '#06080b', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '2px' }}>核心風扇轉速</span>
+                          <strong style={{ fontSize: '20px', color: 'var(--info-blue)' }}>{latestTelemetry.fan_speed} %</strong>
+                        </div>
+                        <div className="nvr-panel" style={{ padding: '10px 15px', background: '#06080b', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '2px' }}>GPU 晶片使用率</span>
+                          <strong style={{ fontSize: '18px', color: 'rgba(255,255,255,0.85)' }}>{latestTelemetry.gpu_utilization} %</strong>
+                        </div>
+                        <div className="nvr-panel" style={{ padding: '10px 15px', background: '#06080b', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '2px' }}>顯示記憶體佔用</span>
+                          <strong style={{ fontSize: '18px', color: 'rgba(255,255,255,0.85)' }}>{latestTelemetry.memory_percent} %</strong>
+                        </div>
+                      </div>
+
+                      {/* 降載狀態與策略 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.02)', padding: '10px 15px', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>降載運作狀態:</span>
+                          <strong style={{ color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
+                            {latestTelemetry.status === 'CRITICAL' ? `🚨 降載運作中 (${systemState.throttling_fps} FPS 保護核心)` : `🟢 正常運作 (${systemState.throttling_fps} FPS 滿載分析)`}
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                          <span>自適應降載策略:</span>
+                          <div style={{ display: 'inline-flex', gap: '3px', background: '#090a0c', padding: '2px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            {[
+                              { id: 'smart', name: '🧠 智慧平衡' },
+                              { id: 'safe', name: '🛡️ 安全防護' },
+                              { id: 'performance', name: '⚡ 效能優先' }
+                            ].map(p => (
+                              <button 
+                                key={p.id}
+                                onClick={() => handleSetThrottlingPolicy(p.id)}
+                                className={`nvr-btn ${systemState.throttling_policy === p.id ? 'active' : ''}`}
+                                style={{ fontSize: '9px', padding: '2px 6px', fontWeight: systemState.throttling_policy === p.id ? 'bold' : 'normal' }}
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 卡片二：強冷風扇手動遙控 */}
+                    <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', background: 'rgba(9, 10, 12, 0.45)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '13px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>🌀 遙測強冷風扇手動遙控 (Manual Override)</strong>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button 
+                            onClick={() => handleSetFanControl('auto', 45)} 
+                            className={`nvr-btn ${latestTelemetry.fan_mode !== 'manual' ? 'active' : ''}`}
+                            style={{ fontSize: '9px', padding: '2px 8px' }}
+                          >
+                            自動 (Auto)
+                          </button>
+                          <button 
+                            onClick={() => handleSetFanControl('manual', latestTelemetry.fan_speed)} 
+                            className={`nvr-btn ${latestTelemetry.fan_mode === 'manual' ? 'active' : ''}`}
+                            style={{ fontSize: '9px', padding: '2px 8px' }}
+                          >
+                            手動 (Manual)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 滑桿控制 */}
+                      <div style={{ padding: '10px 15px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                          <span style={{ color: 'var(--nvr-text-muted)' }}>手動強制風扇轉速：</span>
+                          <strong style={{ color: latestTelemetry.fan_mode === 'manual' ? 'var(--info-blue)' : 'var(--nvr-text-muted)' }}>
+                            {latestTelemetry.fan_speed} % {latestTelemetry.fan_mode === 'manual' ? '(強制送風強冷中)' : '(自動管理中)'}
+                          </strong>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="35" 
+                          max="100" 
+                          value={latestTelemetry.fan_mode === 'manual' ? latestTelemetry.fan_speed : 45} 
+                          disabled={latestTelemetry.fan_mode !== 'manual'}
+                          onChange={(e) => handleSetFanControl('manual', e.target.value)}
+                          style={{ 
+                            width: '100%', 
+                            cursor: latestTelemetry.fan_mode === 'manual' ? 'pointer' : 'not-allowed',
+                            accentColor: 'var(--info-blue)',
+                            opacity: latestTelemetry.fan_mode === 'manual' ? 1.0 : 0.4
+                          }} 
+                        />
+                        <span style={{ fontSize: '9px', color: 'var(--nvr-text-muted)', fontStyle: 'italic' }}>
+                          ※ 廠務提示：手動將強冷風扇開大 (85% 以上)，可快速為 GPU 核心排熱模擬降溫，進而自動重置自適應降載。
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 卡片三：斷路器分勵脫扣器防禦控制 */}
+                    <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', background: 'rgba(255, 51, 102, 0.02)', border: '1px solid rgba(255, 51, 102, 0.1)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ borderBottom: '1px solid rgba(255,51,102,0.15)', paddingBottom: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: 'var(--alarm-red)', display: 'flex', alignItems: 'center', gap: '6px' }}>⚡ 斷路器分勵脫扣器安全狀態與手動防禦</strong>
+                      </div>
+
+                      {/* 繼電器狀態條 */}
+                      <div style={{ padding: '12px', borderRadius: '4px', backgroundColor: systemState.shunt_trip_triggered ? 'rgba(255, 51, 102, 0.08)' : 'rgba(16, 185, 129, 0.05)', border: `1px solid ${systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'rgba(16, 185, 129, 0.2)'}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
+                            {systemState.shunt_trip_triggered ? '⚡ 脫扣器已斷電釋放 (PROTECTED)' : '🔌 繼電器通電監控中 (MONITORING)'}
+                          </span>
+                          {/* 顯示自檢健康狀態 */}
+                          {!isCoilTesting && coilTestResult === 'success' && (
+                            <span style={{ fontSize: '10px', color: 'var(--normal-green)', animation: 'flash-slow 1s infinite alternate', fontWeight: 'bold' }}>
+                              🟢 脫扣線圈健康 OK
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', marginTop: '4px' }}>
+                          分勵脫扣器與 A棟高壓配電櫃完成實體電路串接。當 AI 確認火警時，毫秒級自動切斷供電以防二次災害。
+                        </p>
+                      </div>
+
+                      {/* 手動聯動控制按鈕群 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            onClick={() => handleShuntTripControl('trip')}
+                            disabled={systemState.shunt_trip_triggered}
+                            className="nvr-btn"
+                            style={{ 
+                              flex: 1, 
+                              padding: '10px', 
+                              backgroundColor: systemState.shunt_trip_triggered ? 'rgba(255,51,102,0.1)' : 'rgba(255, 51, 102, 0.2)', 
+                              borderColor: 'var(--alarm-red)', 
+                              color: '#fff', 
+                              fontWeight: 'bold',
+                              fontSize: '11px',
+                              animation: systemState.shunt_trip_triggered ? 'none' : 'flash-slow 1.5s infinite alternate',
+                              cursor: systemState.shunt_trip_triggered ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            ⚡ 手動緊急跳閘斷電
+                          </button>
+                          
+                          {systemState.shunt_trip_triggered && (
+                            <button 
+                              onClick={() => handleShuntTripControl('reset')}
+                              className="nvr-btn"
+                              style={{ 
+                                flex: 1, 
+                                padding: '10px', 
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)', 
+                                borderColor: 'var(--normal-green)', 
+                                color: '#fff', 
+                                fontWeight: 'bold',
+                                fontSize: '11px'
+                              }}
+                            >
+                              🔌 遠端重送電復歸
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 自檢按鈕與進度列 */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <button 
+                            onClick={() => handleShuntTripControl('test')}
+                            disabled={isCoilTesting}
+                            className="nvr-btn"
+                            style={{ 
+                              padding: '8px', 
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+                              borderColor: 'rgba(255,255,255,0.15)', 
+                              fontSize: '11px',
+                              cursor: isCoilTesting ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isCoilTesting ? '🛠️ 線圈脈衝自檢中...' : '🛠️ 執行遠端脫扣線圈自檢 (Dry Run)'}
+                          </button>
+                          
+                          {isCoilTesting && (
+                            <div style={{ width: '100%', height: '6px', background: '#000', borderRadius: '3px', overflow: 'hidden', marginTop: '2px' }}>
+                              <div style={{ height: '100%', background: 'var(--info-blue)', width: `${coilTestProgress}%`, transition: 'width 0.15s ease' }}></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--nvr-text-muted)' }}>顯示卡核心遙測：</span>
-                      <button 
-                        onClick={handleToggleOverheat}
-                        className="nvr-btn"
-                        style={{ fontSize: '11px', padding: '3px 8px', backgroundColor: overheatMode ? 'rgba(255, 51, 102, 0.2)' : 'rgba(255,255,255,0.05)', borderColor: overheatMode ? 'var(--alarm-red)' : 'var(--nvr-border)' }}
-                      >
-                        {overheatMode ? '🔥 關閉核心過熱模擬' : '⚡ 模擬顯示卡過熱降載'}
-                      </button>
+                  {/* ================= 右側示波器與物理特徵 ================= */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    
+                    {/* 火焰特徵示波器卡片 */}
+                    <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(9, 10, 12, 0.45)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: 'var(--alarm-red)', display: 'flex', alignItems: 'center', gap: '6px' }}>🔥 火焰物理特徵實時示波器 (Flame Frequency Scope)</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--alarm-red)', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                          CH1 Freq: {(activeDetections.find(d => d.type === 'flame')?.stats?.flicker_freq || 0.0).toFixed(1)} Hz
+                        </span>
+                      </div>
+
+                      {/* 示波器 Canvas 容器 - 寬度 100% 自適應 */}
+                      <div style={{ width: '100%', height: '150px', position: 'relative', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <canvas 
+                          ref={flameCanvasRef} 
+                          style={{ width: '100%', height: '100%', display: 'block' }} 
+                        />
+                      </div>
+
+                      {/* 物理數值 */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', fontSize: '11px', padding: '5px 10px', background: 'rgba(255,255,255,0.01)', borderRadius: '4px' }}>
+                        <div>火焰色彩佔用率 (HSI比率): <strong style={{ color: '#fff' }}>{(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0).toFixed(1)}%</strong></div>
+                        <div>火焰光敏閃爍不規則度: <strong style={{ color: '#fff' }}>{(activeDetections.find(d => d.type === 'flame')?.stats?.irregularity || 0.0).toFixed(1)}</strong></div>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '10px' }}>
-                      <div className="nvr-panel" style={{ padding: '12px', background: '#090a0c', textAlign: 'center' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>顯示卡核心溫度</span>
-                        <strong style={{ fontSize: '24px', color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : latestTelemetry.status === 'WARNING' ? 'var(--alarm-yellow)' : '#fff' }}>
-                          {latestTelemetry.temperature} °C
-                        </strong>
+                    {/* 煙霧特徵示波器卡片 */}
+                    <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(9, 10, 12, 0.45)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: 'var(--info-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>☁️ 煙霧背景清晰度損失實時示波器 (Clarity Loss Scope)</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--info-blue)', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                          CH1 Loss: {(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0.0).toFixed(0)}%
+                        </span>
                       </div>
-                      <div className="nvr-panel" style={{ padding: '12px', background: '#090a0c', textAlign: 'center' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>核心風扇轉速</span>
-                        <strong style={{ fontSize: '24px' }}>{latestTelemetry.fan_speed} %</strong>
-                      </div>
-                    </div>
 
-                    <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-                      <div>顯示晶片使用率: <strong>{latestTelemetry.gpu_utilization}%</strong></div>
-                      <div>顯示記憶體佔用: <strong>{latestTelemetry.memory_percent}%</strong></div>
-                      <div>自適應降載狀態: <strong style={{ color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
-                        {latestTelemetry.status === 'CRITICAL' ? '🚨 降載運作中 (5 FPS 保護核心過熱)' : '🟢 運作正常 (15 FPS 滿載分析)'}
-                      </strong></div>
-                    </div>
-                  </div>
-
-                  {/* 實體保護連動控制 */}
-                  <div className="nvr-panel" style={{ padding: '15px' }}>
-                    <strong style={{ fontSize: '12px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '8px' }}>⚡ 斷路器分勵脫扣器安全狀態</strong>
-                    <div style={{ padding: '12px', borderRadius: '4px', backgroundColor: systemState.shunt_trip_triggered ? 'rgba(255, 51, 102, 0.08)' : 'rgba(16, 185, 129, 0.05)', border: `1px solid ${systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'rgba(16, 185, 129, 0.2)'}` }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
-                        {systemState.shunt_trip_triggered ? '⚡ 脫扣器已斷電釋放 (PROTECTED)' : '🔌 繼電器通電監控中 (MONITORING)'}
+                      {/* 示波器 Canvas 容器 - 寬度 100% 自適應 */}
+                      <div style={{ width: '100%', height: '150px', position: 'relative', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <canvas 
+                          ref={smokeCanvasRef} 
+                          style={{ width: '100%', height: '100%', display: 'block' }} 
+                        />
                       </div>
-                      <p style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', marginTop: '4px' }}>
-                        分勵脫扣器 (Shunt Trip) 與 A棟高壓配電櫃完成實體電路串接。當 AI 確認火警時，毫秒級自動切斷供電。
-                      </p>
+
+                      {/* 物理數值 */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', fontSize: '11px', padding: '5px 10px', background: 'rgba(255,255,255,0.01)', borderRadius: '4px' }}>
+                        <div>高頻模糊梯度損失: <strong style={{ color: '#fff' }}>{(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0).toFixed(1)}%</strong></div>
+                        <div>煙霧時空漂移向上斜率: <strong style={{ color: '#fff' }}>{(activeDetections.find(d => d.type === 'smoke')?.stats?.y_trend || 0.0).toFixed(2)}</strong></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* 右側：雙重物理特徵分析引擎遙測 */}
-                <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px' }}>
-                    <strong style={{ fontSize: '15px' }}>🧠 二階段物理特徵驗證引擎實時遙測 (CH1)</strong>
-                  </div>
-
-                  <p style={{ fontSize: '12px', color: 'var(--nvr-text-muted)' }}>
-                    系統提取火災火焰的色彩頻率分佈 (YCbCr / HSI 比率) 及煙霧蔓延的邊界模糊高頻特徵，避免傳統純 YOLO 的物件辨識誤報。
-                  </p>
-
-                  {/* 火焰色彩與閃爍頻率 */}
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
-                    <strong style={{ fontSize: '12px', color: 'var(--alarm-red)', display: 'block', marginBottom: '8px' }}>🔥 火焰物理特徵提取 (Flame Color & Flicker Freq)</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                          <span>色彩佔用率 (HSI)</span>
-                          <strong>{(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0).toFixed(1)}%</strong>
-                        </div>
-                        <div style={{ height: '5px', background: '#000', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', background: 'var(--alarm-red)', width: `${(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0)}%` }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                          <span>閃爍主頻率 (flicker)</span>
-                          <strong>{(activeDetections.find(d => d.type === 'flame')?.stats?.flicker_freq || 0).toFixed(1)} Hz</strong>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>
-                          安全區間: 5Hz ~ 10Hz 判定為真實明火
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 煙霧膨脹與高頻清晰度損失 */}
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
-                    <strong style={{ fontSize: '12px', color: 'var(--info-blue)', display: 'block', marginBottom: '8px' }}>☁️ 煙霧背景模糊度分析 (Laplacian High Freq Blurring)</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                          <span>背景高頻清晰度損失</span>
-                          <strong>{(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0).toFixed(0)}%</strong>
-                        </div>
-                        <div style={{ height: '5px', background: '#000', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', background: 'var(--info-blue)', width: `${(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0)}%` }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                          <span>時空漂移向上斜率</span>
-                          <strong>{(activeDetections.find(d => d.type === 'smoke')?.stats?.y_trend || 0.0).toFixed(2)}</strong>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>
-                          煙霧向上漂移趨勢物理分析
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             )}
 
