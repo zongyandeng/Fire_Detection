@@ -77,6 +77,9 @@ class SystemState:
         self.negative_samples_count = 0
         self.alarm_logs = []
         
+        # 載入持久化日誌與計數 (重啟伺服器不遺失紀錄)
+        self.load_persisted_data()
+        
         # 實時分析元數據 (用於前端波形圖與儀表)
         self.current_frame_data = {}
         
@@ -85,6 +88,34 @@ class SystemState:
         
         # 最新影格快取
         self.latest_annotated_frame = None
+
+    def load_persisted_data(self):
+        log_file = os.path.join(BASE_DIR, "data", "alarm_logs.json")
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.alarm_logs = data.get("alarm_logs", [])
+                    self.negative_samples_count = data.get("negative_samples_count", 0)
+                print(f"💾 [持久化] 成功從硬碟載入 {len(self.alarm_logs)} 筆歷史告警日誌與 {self.negative_samples_count} 個負樣本計數。")
+            except Exception as e:
+                print(f"⚠️ [持久化] 載入歷史日誌失敗: {e}")
+                self.alarm_logs = []
+                self.negative_samples_count = 0
+
+    def save_persisted_data(self):
+        log_file = os.path.join(BASE_DIR, "data", "alarm_logs.json")
+        try:
+            # 確保 data 目錄存在
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            with open(log_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "alarm_logs": self.alarm_logs,
+                    "negative_samples_count": self.negative_samples_count
+                }, f, ensure_ascii=False, indent=4)
+            print("💾 [持久化] 成功同步最新日誌與負樣本數據至硬碟。")
+        except Exception as e:
+            print(f"⚠️ [持久化] 寫入歷史日誌失敗: {e}")
 
 sys_state = SystemState()
 state_lock = threading.Lock()
@@ -238,6 +269,7 @@ def video_inference_loop():
                         "shunt_trip": True
                     }
                     sys_state.alarm_logs.insert(0, log_entry)
+                    sys_state.save_persisted_data() # 同步寫入硬碟
                     
                     # 執行容量管理 (限制儲存空間爆滿)
                     quota_manager.enforce_quota()
@@ -347,6 +379,7 @@ def post_confirm_fire():
             "shunt_trip": True
         }
         sys_state.alarm_logs.insert(0, log_entry)
+        sys_state.save_persisted_data() # 同步寫入硬碟
         
         # 多軌推送
         notifier.send_email_alert("A棟配電櫃 (人工確認)", timestamp, 1.0, snapshot_path if sys_state.latest_annotated_frame is not None else None)
@@ -379,6 +412,7 @@ def post_dismiss_alarm():
             cv2.imwrite(negative_path, sys_state.latest_annotated_frame)
             print(f"📁 [負樣本儲存] 已將此誤報影格儲存至 {negative_path} (用於二次微調)")
             
+        sys_state.save_persisted_data() # 同步寫入硬碟
         return {"status": "dismissed", "negative_samples_count": sys_state.negative_samples_count}
 
 @app.get("/api/telemetry")
