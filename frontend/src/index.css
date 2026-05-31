@@ -397,3 +397,82 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--nvr-text-muted);
 }
+
+/* ================= 歷史重播專屬樣式與動態效果 ================= */
+
+/* 歷史事件日誌 Hover 效果 */
+.playback-event-item:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: var(--nvr-text-muted) !important;
+  transform: translateX(2px);
+}
+
+/* 歷史火警重播畫面全域紅閃爍 */
+.playback-alarm-active {
+  animation: playback-red-alert-flash 1s infinite alternate;
+}
+
+@keyframes playback-red-alert-flash {
+  0% {
+    box-shadow: inset 0 0 15px rgba(255, 51, 102, 0.25);
+    background-color: #0c0506;
+  }
+  100% {
+    box-shadow: inset 0 0 35px rgba(255, 51, 102, 0.65);
+    background-color: #1a080a;
+  }
+}
+
+/* 斷電隔離雪花雜訊動畫 (TV Snow Noise) */
+.snow-noise {
+  background-image: 
+    radial-gradient(circle at 50% 50%, #fff 1%, transparent 1.5%),
+    radial-gradient(circle at 20% 80%, #fff 0.8%, transparent 1.2%),
+    radial-gradient(circle at 80% 30%, #fff 0.9%, transparent 1.3%);
+  background-size: 15px 15px, 20px 20px, 18px 18px;
+  animation: snow-drift 0.15s infinite linear;
+}
+
+@keyframes snow-drift {
+  0% { background-position: 0px 0px, 0px 0px, 0px 0px; }
+  33% { background-position: 5px -3px, -2px 6px, 4px -2px; }
+  66% { background-position: -4px 5px, 3px -4px, -5px 4px; }
+  100% { background-position: 2px -2px, -5px 2px, 3px -6px; }
+}
+
+/* 火焰跳動 CSS 特效 */
+.playback-fire-container {
+  opacity: 0.85;
+  animation: flame-flicker 0.2s infinite alternate ease-in-out;
+}
+
+@keyframes flame-flicker {
+  0% { transform: scaleX(0.96) skewX(-1deg); opacity: 0.8; }
+  100% { transform: scaleX(1.04) skewX(1deg); opacity: 0.95; }
+}
+
+/* 時間軸 Slider 自訂精緻外觀 */
+.nvr-timeline-slider::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.08);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.nvr-timeline-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--nvr-border-focus);
+  cursor: pointer;
+  margin-top: -4px;
+  box-shadow: 0 0 5px rgba(255, 51, 102, 0.8);
+  transition: transform 0.1s;
+}
+
+.nvr-timeline-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #ff668f;
+}
+

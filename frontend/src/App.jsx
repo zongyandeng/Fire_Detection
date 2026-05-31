@@ -32,6 +32,278 @@ function App() {
   const [isAutoTouring, setIsAutoTouring] = useState(false);
   const [pictureMode, setPictureMode] = useState('default'); // default | vivid | infrared | thermal
 
+  // ================= 歷史回放與重播控制相關狀態與邏輯 =================
+  const [playbackTime, setPlaybackTime] = useState(37200); // 當前回回放秒數，預設 37200 秒 (即 10:20:00)
+  const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1, 2, 4, 8, 16
+  const [selectedPlaybackDate, setSelectedPlaybackDate] = useState('2026-05-30');
+  const [selectedPlaybackCamId, setSelectedPlaybackCamId] = useState('CAM_A_DIST_BOARD');
+
+  // 轉換秒數為 HH:MM:SS
+  const formatSecondsToHMS = (totalSeconds) => {
+    const secs = Math.floor(totalSeconds);
+    const h = Math.floor(secs / 3600).toString().padStart(2, '0');
+    const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
+  // 歷史告警事件資料庫
+  const PLAYBACK_EVENTS = {
+    '2026-05-30': [
+      { time: 37200, timeStr: '10:20:00', type: '🚨 AI 煙霧特徵預警', camId: 'CAM_A_DIST_BOARD', desc: 'A棟配電櫃檢測到微弱煙霧背景模糊', icon: '⚠️' },
+      { time: 37425, timeStr: '10:23:45', type: '🔥 AI 二階段火警確認', camId: 'CAM_A_DIST_BOARD', desc: 'YOLO 核心算法高度確認火焰特徵 (95%)', icon: '🚨' },
+      { time: 37531, timeStr: '10:25:31', type: '⚡ 分勵脫扣防護斷電', camId: 'CAM_A_DIST_BOARD', desc: '聯動機制啟動，切斷配電櫃主迴路電源', icon: '🔌' }
+    ],
+    '2026-05-29': [
+      { time: 52200, timeStr: '14:30:00', type: '🟢 系統自動例行巡檢', camId: 'CAM_B_GENERATOR', desc: '發電機房各項物理指標狀態良好', icon: '✔️' },
+      { time: 55800, timeStr: '15:30:00', type: '🟢 F棟防爆倉壓力釋放', camId: 'CAM_F_CHEM_STORE', desc: '防爆閥門自動微啟，壓力正常下降', icon: '✔️' }
+    ],
+    '2026-05-31': [
+      { time: 29700, timeStr: '08:15:00', type: '🔧 NVR 系統維護重啟', camId: 'CAM_A_DIST_BOARD', desc: '後端儲存硬碟空間自動清理完成', icon: 'ℹ️' }
+    ]
+  };
+
+  // 歷史回放自動計時器 (使用高幀率 requestAnimationFrame 讓播放平滑無比)
+  useEffect(() => {
+    let lastTime = performance.now();
+    let frameId;
+    
+    const updateLoop = (now) => {
+      if (isPlaybackPlaying) {
+        const deltaSec = (now - lastTime) / 1000;
+        setPlaybackTime(prev => {
+          const next = prev + deltaSec * playbackSpeed;
+          if (next >= 86399) {
+            setIsPlaybackPlaying(false);
+            return 86399;
+          }
+          return next;
+        });
+      }
+      lastTime = now;
+      if (isPlaybackPlaying) {
+        frameId = requestAnimationFrame(updateLoop);
+      }
+    };
+
+    if (isPlaybackPlaying) {
+      lastTime = performance.now();
+      frameId = requestAnimationFrame(updateLoop);
+    }
+    
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [isPlaybackPlaying, playbackSpeed]);
+
+  // 動態渲染歷史重播畫面的內容
+  const renderPlaybackScreen = (camId, timeInSeconds) => {
+    const isCH1Alarm = camId === 'CAM_A_DIST_BOARD' && (timeInSeconds >= 37200 && timeInSeconds <= 37800); // 10:20:00 ~ 10:30:00
+    const isCH1Shutdown = camId === 'CAM_A_DIST_BOARD' && (timeInSeconds > 37531); // 10:25:31 之後
+    
+    if (camId === 'CAM_A_DIST_BOARD') {
+      if (isCH1Shutdown) {
+        return (
+          <div style={{ width: '100%', height: '100%', backgroundColor: '#000', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', color: '#ff3366', fontFamily: 'monospace' }}>
+            <div className="snow-noise" style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.15, pointerEvents: 'none' }}></div>
+            <span style={{ fontSize: '48px', display: 'block', animation: 'flash-slow 1s infinite alternate' }}>⚠️</span>
+            <strong style={{ fontSize: '18px', marginTop: '10px', letterSpacing: '1px' }}>NO SIGNAL - POWER CUT OFF</strong>
+            <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', marginTop: '5px' }}>
+              [聯動斷電防禦啟用：分勵脫扣器切斷電器設備電源]
+            </div>
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '10px' }}>
+              DISCONNECTED AT 10:25:31 | CH1 BACKUP STORAGE
+            </div>
+          </div>
+        );
+      }
+      
+      if (isCH1Alarm) {
+        // 火警重播狀態：隨秒數增長火焰與煙霧的大小
+        const fireSeverity = Math.min(100, Math.max(10, ((timeInSeconds - 37200) / 331) * 100)); // 在 10:25:31 前飆到最高
+        const tempVal = (35.2 + ((timeInSeconds - 37200) ** 1.3) * 0.05).toFixed(1);
+        
+        return (
+          <div className="playback-alarm-active" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0a0505', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255, 51, 102, 0.8)', padding: '2px 6px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold', color: '#fff', zIndex: 10, animation: 'flash-fast 0.5s infinite alternate' }}>
+              🚨 AI AUTO FIRE DETECTED
+            </div>
+            
+            {/* OSD Bounding box */}
+            <div style={{
+              position: 'absolute',
+              border: '2px solid var(--alarm-red)',
+              width: '160px',
+              height: '100px',
+              top: '40px',
+              left: '60px',
+              boxShadow: '0 0 10px rgba(255, 51, 102, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              padding: '4px',
+              fontFamily: 'monospace',
+              fontSize: '9px',
+              color: 'var(--alarm-red)',
+              backgroundColor: 'rgba(255, 51, 102, 0.05)',
+              zIndex: 5
+            }}>
+              <div>YOLO: FIRE ({(95 + Math.random()*4.9).toFixed(1)}%)</div>
+              <div>TEMP: {tempVal}°C (CRITICAL)</div>
+              <div>SMOKE: DETECTED</div>
+            </div>
+
+            {/* 模擬火焰的 CSS 渲染 */}
+            <div className="playback-fire-container" style={{ position: 'absolute', bottom: 0, width: '100%', height: `${fireSeverity * 0.7}%`, background: 'linear-gradient(to top, rgba(255,68,0,0.8), rgba(255,153,0,0.4), transparent)', filter: 'blur(3px)', transition: 'height 0.3s ease', zIndex: 1 }}></div>
+            <div className="playback-smoke-container" style={{ position: 'absolute', top: 0, width: '100%', height: '100%', background: 'radial-gradient(circle at 140px 90px, rgba(50,50,50,0.7), transparent 70%)', filter: 'blur(10px)', zIndex: 1 }}></div>
+            
+            {/* 電視監控雜訊線與配電櫃實體儀表模擬 */}
+            <div style={{ color: '#fff', fontSize: '12px', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '5px', textAlign: 'left', width: '90%' }}>
+              <div style={{ fontWeight: 'bold', color: 'var(--alarm-red)' }}>A棟配電櫃 (重播中)</div>
+              <div>環境溫度: <strong style={{ color: 'var(--alarm-red)' }}>{tempVal} °C</strong></div>
+              <div>A相電壓: <strong>218.4 V</strong></div>
+              <div>B相電壓: <strong>219.1 V</strong></div>
+              <div>C相電壓: <strong style={{ color: 'var(--alarm-red)', animation: 'flash-slow 0.8s infinite alternate' }}>165.2 V (不平衡)</strong></div>
+              <div>配電箱負載: <strong>89.4% (臨界過載)</strong></div>
+            </div>
+          </div>
+        );
+      }
+      
+      // 正常配電櫃狀態
+      const normalTemp = (35.2 + Math.sin(timeInSeconds / 100) * 0.4).toFixed(1);
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0e1117', overflow: 'hidden' }}>
+          <div style={{ color: '#fff', fontSize: '12px', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '5px', textAlign: 'left', width: '90%' }}>
+            <div style={{ fontWeight: 'bold', color: 'var(--info-blue)' }}>A棟配電櫃 (歷史存檔錄影)</div>
+            <div>環境溫度: <strong>{normalTemp} °C</strong></div>
+            <div>A相電壓: <strong>220.4 V</strong></div>
+            <div>B相電壓: <strong>221.2 V</strong></div>
+            <div>C相電壓: <strong>220.8 V</strong></div>
+            <div>配電箱負載: <strong>42.1% (正常)</strong></div>
+          </div>
+          <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '10px', color: 'var(--normal-green)' }}>
+            🟢 SYSTEM SAFE
+          </div>
+        </div>
+      );
+    }
+    
+    // 如果是其他常規通道，渲染與時間軸連動的動態畫面
+    switch (camId) {
+      case 'CAM_B_GENERATOR':
+        const genLoad = (70.0 + Math.sin(timeInSeconds / 20) * 5 + Math.cos(timeInSeconds / 100) * 2).toFixed(1);
+        const genTemp = (80.0 + Math.sin(timeInSeconds / 50) * 1.5).toFixed(1);
+        return (
+          <div style={{ color: '#10b981', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', textAlign: 'left', padding: '10px', width: '100%' }}>
+            <div style={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid #333', paddingBottom: '3px' }}>GEN-SET #02 RECORDING</div>
+            <div>STATUS: <strong style={{ color: '#10b981' }}>RUNNING</strong></div>
+            <div>LOAD: <strong>{genLoad} kW</strong></div>
+            <div>COOLANT TEMP: <strong>{genTemp} °C</strong></div>
+            <div>EXHAUST TEMP: <strong>{(340.2 + Math.sin(timeInSeconds / 30) * 4).toFixed(1)} °C</strong></div>
+            <div>LINE VOLTAGE: <strong>381.4 V</strong></div>
+            <div style={{ marginTop: '5px', display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span className="led-indicator led-green"></span>
+              <span style={{ color: '#8a94a6', fontSize: '9px' }}>PLAYBACK DATA OK</span>
+            </div>
+          </div>
+        );
+      case 'CAM_C_RAW_WAREHOUSE':
+        const warehouseSecure = timeInSeconds % 100 > 95;
+        return (
+          <div style={{ color: '#8a94a6', position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <svg width="80%" height="80%" viewBox="0 0 100 60" style={{ opacity: 0.25 }}>
+              <rect x="10" y="10" width="30" height="20" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <rect x="10" y="30" width="30" height="20" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <rect x="50" y="10" width="40" height="40" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <line x1="10" y1="10" x2="50" y2="10" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
+              <line x1="40" y1="50" x2="90" y2="50" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
+            </svg>
+            <div style={{ position: 'absolute', bottom: '15px', color: warehouseSecure ? '#ff3366' : '#ff9900', fontSize: '9px', fontWeight: 'bold' }}>
+              {warehouseSecure ? '⚠️ [INFRARED] SCANNING PATROL...' : '⚠️ [INFRARED] CH3 ZONE SECURE'}
+            </div>
+          </div>
+        );
+      case 'CAM_D_PRODUCTION_A':
+        const conveyorLeft = (timeInSeconds * 20) % 100;
+        const armAngle = Math.sin(timeInSeconds * 2.5) * 20;
+        return (
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#090a0c' }}>
+            <div style={{ width: '80%', height: '8px', background: '#333', borderRadius: '4px', position: 'relative', overflow: 'hidden', marginBottom: '15px' }}>
+              <div style={{ position: 'absolute', width: '20px', height: '100%', background: '#444', left: `${conveyorLeft}%` }}></div>
+            </div>
+            <div style={{ display: 'flex', gap: '2px' }}>
+              <div style={{ width: '6px', height: '25px', background: '#ff3366', transform: `rotate(${armAngle}deg)`, transformOrigin: 'top center', transition: 'transform 0.05s linear' }}></div>
+              <div style={{ width: '6px', height: '15px', background: '#333' }}></div>
+            </div>
+            <div style={{ fontSize: '9px', color: '#8a94a6', marginTop: '8px' }}>
+              AI: FEED RATE - 85% | RECORDING PLAYBACK
+            </div>
+          </div>
+        );
+      case 'CAM_F_CHEM_STORE':
+        const chemA = (14.0 + Math.sin(timeInSeconds / 200) * 0.5).toFixed(1);
+        const chemB = (92.1 + Math.cos(timeInSeconds / 200) * 0.1).toFixed(1);
+        return (
+          <div style={{ color: '#f59e0b', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', textAlign: 'left', padding: '10px', width: '100%' }}>
+            <div style={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid #333', paddingBottom: '3px' }}>防爆化學倉重播</div>
+            <div>儲罐 A (有機溶劑): <strong>{chemA}% 容量</strong></div>
+            <div>儲罐 B (助燃劑): <strong>{chemB}% (HIGH)</strong></div>
+            <div>環境 VOC 濃度: <strong style={{ color: '#10b981' }}>2.1 ppm (安全)</strong></div>
+            <div>防爆冷卻閥門: <strong>AUTO LOCKDOWN MODE</strong></div>
+            <div style={{ border: '1px solid #ff9900', color: '#ff9900', padding: '3px', borderRadius: '2px', fontSize: '9px', textAlign: 'center', marginTop: '3px', fontWeight: 'bold' }}>
+              ⚡ EX-PROOF STATUS: ACTIVE
+            </div>
+          </div>
+        );
+      case 'CAM_H_SUBSTATION':
+        const flashHV = timeInSeconds % 4 > 3;
+        return (
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#3b82f6', position: 'relative' }}>
+            <div style={{ fontSize: '30px', opacity: flashHV ? 0.3 : 1 }}>⚡</div>
+            <div style={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>HIGH VOLTAGE SUBSTATION</div>
+            <div style={{ fontSize: '9px', color: '#8a94a6', marginTop: '2px' }}>
+              VOLTAGE: 22.8 kV | CURRENT: 145.2 A | PF: 0.98
+            </div>
+          </div>
+        );
+      case 'CAM_G_BOILER':
+        const steamPressure = (1.25 + Math.sin(timeInSeconds / 10) * 0.03).toFixed(2);
+        const boilerTemp = (1050 + Math.cos(timeInSeconds / 15) * 6).toFixed(0);
+        return (
+          <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', padding: '10px', width: '100%' }}>
+            <div style={{ fontWeight: 'bold', borderBottom: '1px solid #333', paddingBottom: '3px' }}>BOILER #01 DATA</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>主蒸汽壓力:</span>
+              <strong style={{ color: '#f59e0b' }}>{steamPressure} MPa</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>爐膛溫度:</span>
+              <strong>{boilerTemp} °C</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>給水流量:</span>
+              <strong>14.2 t/h</strong>
+            </div>
+            <div style={{ background: '#222', borderRadius: '3px', padding: '4px', fontSize: '9px', color: '#10b981', textAlign: 'center', marginTop: '4px' }}>
+              🟢 VALVE ACTUATOR: NORMAL (42.1%)
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div style={{ color: '#555866', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '8px' }}>
+            <span style={{ fontSize: '24px' }}>🎥</span>
+            <span style={{ fontSize: '10px', color: '#8a94a6' }}>CH {camId.slice(-1) || 'N'} SIMULATION OK</span>
+            <span style={{ fontSize: '8px', color: '#444' }}>PLAYBACK STREAM ACTIVE</span>
+          </div>
+        );
+    }
+  };
+
   // 指派相機到特定電視牆插槽
   const handleAssignCameraToSlot = (slotIndex, cameraId, isAuto = false) => {
     setActiveSlots(prev => {
@@ -1187,61 +1459,274 @@ function App() {
             {/* ================= SPA 畫面 3: 歷史回放 (Playback) ================= */}
             {activeView === 'playback' && (
               <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: '16px' }}>📂 歷史錄影與火警告警日誌回放 (Playback Control)</strong>
-                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>📂</span>
+                    <strong style={{ fontSize: '16px' }}>歷史錄影與火警雙特徵告警重播控制台 (NVR Playback Control)</strong>
+                  </div>
+                  <button onClick={() => { setIsPlaybackPlaying(false); setActiveView('main_menu'); }} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '20px', flex: 1 }}>
-                  {/* 通道選擇與日期 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', flex: 1 }}>
+                  {/* 左側：控制參數與當日日誌 */}
                   <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div>
                       <label className="nvr-label">📅 選擇回放日期</label>
-                      <input type="date" defaultValue="2026-05-30" className="nvr-input" />
+                      <input 
+                        type="date" 
+                        value={selectedPlaybackDate} 
+                        onChange={(e) => {
+                          setSelectedPlaybackDate(e.target.value);
+                          // 自動將時間跳至該日第一個事件，若無則設為早上 8 點
+                          const evts = PLAYBACK_EVENTS[e.target.value];
+                          if (evts && evts.length > 0) {
+                            setPlaybackTime(evts[0].time);
+                          } else {
+                            setPlaybackTime(28800); // 08:00:00
+                          }
+                          setIsPlaybackPlaying(false);
+                        }} 
+                        className="nvr-input" 
+                      />
                     </div>
                     
                     <div>
                       <label className="nvr-label">🎥 選擇監控通道</label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '250px', overflowY: 'auto' }}>
-                        {cameras.map(cam => (
-                          <button 
-                            key={cam.id} 
-                            onClick={() => setSelectedCameraId(cam.id)}
-                            className={`nvr-btn ${selectedCameraId === cam.id ? 'active' : ''}`}
-                            style={{ fontSize: '11px', justifyContent: 'flex-start', padding: '6px 10px' }}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '180px', overflowY: 'auto', paddingRight: '5px' }}>
+                        {cameras.map(cam => {
+                          const isAssigned = selectedPlaybackCamId === cam.id;
+                          return (
+                            <button 
+                              key={cam.id} 
+                              onClick={() => {
+                                setSelectedPlaybackCamId(cam.id);
+                                // 切換相機時暫停播放，以防視覺混亂
+                                setIsPlaybackPlaying(false);
+                              }}
+                              className={`nvr-btn ${isAssigned ? 'active' : ''}`}
+                              style={{ fontSize: '11px', justifyContent: 'flex-start', padding: '6px 10px', width: '100%' }}
+                            >
+                              <span style={{ marginRight: '6px' }}>{isAssigned ? '⏺' : '🎥'}</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cam.name.split(' - ')[0]} - {cam.name.split(' - ')[1] || cam.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--nvr-border)', paddingTop: '12px' }}>
+                      <label className="nvr-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>📌 當日歷史事件日誌</span>
+                        <span style={{ fontSize: '9px', background: 'var(--alarm-red)', color: '#fff', padding: '1px 4px', borderRadius: '2px', display: selectedPlaybackDate === '2026-05-30' ? 'inline' : 'none' }}>AI CONFIRMED</span>
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '5px', marginTop: '6px' }}>
+                        {PLAYBACK_EVENTS[selectedPlaybackDate]?.map((evt, idx) => (
+                          <div 
+                            key={idx}
+                            onClick={() => {
+                              setPlaybackTime(evt.time);
+                              setSelectedPlaybackCamId(evt.camId);
+                              setIsPlaybackPlaying(true);
+                            }}
+                            style={{
+                              background: 'rgba(255,255,255,0.02)',
+                              border: selectedPlaybackCamId === evt.camId && playbackTime >= evt.time && playbackTime < evt.time + 300
+                                ? '1px solid var(--alarm-red)' 
+                                : '1px solid var(--nvr-border)',
+                              borderRadius: '3px',
+                              padding: '8px',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px',
+                              transition: 'all 0.2s',
+                              boxShadow: selectedPlaybackCamId === evt.camId && playbackTime >= evt.time && playbackTime < evt.time + 300
+                                ? '0 0 5px rgba(255, 51, 102, 0.15)'
+                                : 'none'
+                            }}
+                            className="playback-event-item"
                           >
-                            {cam.name}
-                          </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', alignItems: 'center' }}>
+                              <span style={{ color: evt.icon === '🚨' || evt.icon === '🔥' ? 'var(--alarm-red)' : 'inherit' }}>{evt.icon} {evt.type}</span>
+                              <span style={{ color: 'var(--info-blue)', fontFamily: 'monospace', fontSize: '10px' }}>{evt.timeStr}</span>
+                            </div>
+                            <div style={{ color: 'var(--nvr-text-muted)', fontSize: '10px', lineHeight: '1.3' }}>
+                              {evt.desc}
+                            </div>
+                          </div>
                         ))}
+                        {(!PLAYBACK_EVENTS[selectedPlaybackDate] || PLAYBACK_EVENTS[selectedPlaybackDate].length === 0) && (
+                          <div style={{ color: 'var(--nvr-text-muted)', fontSize: '11px', textAlign: 'center', padding: '20px 10px', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '3px' }}>
+                            🗄️ 該日無告警歷史事件記錄
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* 回放畫面模擬與時間軸 */}
+                  {/* 右側：回放畫面與時間軸 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <div style={{ flex: 1, background: '#000', border: '1px solid var(--nvr-border)', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', minHeight: '300px' }}>
-                      <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center' }}>
-                        <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>📼</span>
-                        <strong>正在載入 {cameras.find(c => c.id === selectedCameraId)?.name} 歷史錄影...</strong>
-                        <div style={{ fontSize: '11px', marginTop: '4px' }}>讀取 2026-05-30 H.265 本地備份日誌檔案</div>
+                    {/* 高擬真重播螢幕 */}
+                    <div style={{ flex: 1, background: '#000', border: '2px solid var(--nvr-border)', borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', minHeight: '350px', overflow: 'hidden' }}>
+                      
+                      {renderPlaybackScreen(selectedPlaybackCamId, playbackTime)}
+                      
+                      {/* 右上角 OSD 時間與日期 */}
+                      <div style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: '3px', fontSize: '12px', fontFamily: 'monospace', color: '#fff', zIndex: 10, backdropFilter: 'blur(3px)', letterSpacing: '0.5px', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                        📅 {selectedPlaybackDate} &nbsp;&nbsp; ⏰ {formatSecondsToHMS(playbackTime)}
                       </div>
-                      <div style={{ position: 'absolute', top: '15px', left: '15px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '3px', fontSize: '11px' }}>
-                        ▶ PLAYBACK MODE (2.0x SPEED)
+
+                      {/* 左上角播放狀態標籤 */}
+                      <div style={{ position: 'absolute', top: '15px', left: '15px', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: '3px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10, color: '#fff', backdropFilter: 'blur(3px)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                        <span className="led-indicator led-green" style={{ display: isPlaybackPlaying ? 'inline-block' : 'none', margin: 0 }}></span>
+                        <span className="led-indicator led-yellow" style={{ display: !isPlaybackPlaying ? 'inline-block' : 'none', margin: 0, animation: 'none' }}></span>
+                        <strong>{isPlaybackPlaying ? `重播中 (${playbackSpeed}.0x SPEED)` : '重播暫停 (PAUSED)'}</strong>
                       </div>
+
+                      {/* 電視監控掃描線效果 (增強 Wow Factor!) */}
+                      <div className="camera-static" style={{ opacity: 0.03, pointerEvents: 'none', zIndex: 8 }}></div>
                     </div>
 
-                    {/* NVR 24小時時間軸滑塊 */}
-                    <div className="nvr-panel" style={{ padding: '15px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--nvr-text-muted)', marginBottom: '5px' }}>
+                    {/* NVR 24小時時間軸滑塊與控制面板 */}
+                    <div className="nvr-panel" style={{ padding: '15px 20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--nvr-text-muted)', marginBottom: '5px', padding: '0 2px' }}>
                         <span>00:00</span>
-                        <span>06:00</span>
+                        <span>04:00</span>
+                        <span>08:00</span>
                         <span>12:00</span>
-                        <span>18:00</span>
+                        <span>16:00</span>
+                        <span>20:00</span>
                         <span>24:00</span>
                       </div>
-                      <input type="range" min="0" max="1440" defaultValue="625" style={{ width: '100%', accentColor: 'var(--nvr-border-focus)' }} />
-                      <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', fontWeight: 'bold' }}>
-                        當前播放時間戳：10:25:31 (模擬火警前夕錄影)
+                      
+                      <div style={{ position: 'relative', width: '100%', height: '24px', display: 'flex', alignItems: 'center' }}>
+                        {/* 歷史事件高亮標記區段 (10:20 - 10:30) */}
+                        {selectedPlaybackDate === '2026-05-30' && (
+                          <div 
+                            style={{
+                              position: 'absolute',
+                              left: `${(37200 / 86400) * 100}%`,
+                              width: `${(600 / 86400) * 100}%`,
+                              height: '8px',
+                              backgroundColor: 'rgba(255, 51, 102, 0.45)',
+                              borderLeft: '1px solid var(--alarm-red)',
+                              borderRight: '1px solid var(--alarm-red)',
+                              borderRadius: '2px',
+                              top: '8px',
+                              zIndex: 1,
+                              pointerEvents: 'none',
+                              boxShadow: '0 0 8px rgba(255, 51, 102, 0.4)'
+                            }}
+                            title="AI 雙特徵火警告警錄影區段 (10:20:00 - 10:30:00)"
+                          ></div>
+                        )}
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="86399" 
+                          value={Math.floor(playbackTime)} 
+                          onChange={(e) => {
+                            setPlaybackTime(Number(e.target.value));
+                            setIsPlaybackPlaying(false); // 拖曳時自動暫停，讓使用者平穩檢視畫面
+                          }}
+                          className="nvr-timeline-slider"
+                          style={{ 
+                            width: '100%', 
+                            accentColor: 'var(--nvr-border-focus)',
+                            position: 'relative',
+                            zIndex: 2,
+                            cursor: 'pointer',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            height: '6px',
+                            borderRadius: '3px',
+                            outline: 'none'
+                          }} 
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                        {/* 控制按鈕 */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button 
+                            onClick={() => {
+                              setPlaybackTime(prev => Math.max(0, prev - 10));
+                            }} 
+                            className="nvr-btn" 
+                            style={{ fontSize: '11px', padding: '6px 12px' }}
+                            title="倒退 10 秒"
+                          >
+                            ⏪ -10s
+                          </button>
+                          
+                          <button 
+                            onClick={() => setIsPlaybackPlaying(!isPlaybackPlaying)} 
+                            className={`nvr-btn ${isPlaybackPlaying ? 'active' : ''}`}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '6px 16px', 
+                              fontWeight: 'bold',
+                              borderColor: isPlaybackPlaying ? 'var(--normal-green)' : 'var(--nvr-border)',
+                              boxShadow: isPlaybackPlaying ? '0 0 5px rgba(16, 185, 129, 0.2)' : 'none'
+                            }}
+                          >
+                            {isPlaybackPlaying ? '⏸ 暫停重播' : '▶ 啟動重播'}
+                          </button>
+                          
+                          <button 
+                            onClick={() => {
+                              setPlaybackTime(prev => Math.min(86399, prev + 10));
+                            }} 
+                            className="nvr-btn" 
+                            style={{ fontSize: '11px', padding: '6px 12px' }}
+                            title="前進 10 秒"
+                          >
+                            ⏩ +10s
+                          </button>
+                          
+                          <div style={{ width: '1px', background: 'var(--nvr-border)', height: '18px', margin: '0 8px' }}></div>
+                          
+                          <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)' }}>重播倍率:</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {[1, 2, 4, 8, 16].map(speed => (
+                              <button 
+                                key={speed} 
+                                onClick={() => setPlaybackSpeed(speed)} 
+                                className={`nvr-btn ${playbackSpeed === speed ? 'active' : ''}`}
+                                style={{ 
+                                  fontSize: '10px', 
+                                  padding: '4px 8px',
+                                  fontWeight: playbackSpeed === speed ? 'bold' : 'normal'
+                                }}
+                              >
+                                {speed}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 當前狀態與時間顯示 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                          {selectedPlaybackDate === '2026-05-30' && playbackTime >= 37200 && playbackTime <= 37800 && (
+                            <span 
+                              style={{ 
+                                background: 'rgba(255, 51, 102, 0.15)', 
+                                border: '1px solid var(--alarm-red)', 
+                                color: 'var(--alarm-red)', 
+                                padding: '3px 8px', 
+                                borderRadius: '3px', 
+                                fontSize: '11px', 
+                                fontWeight: 'bold',
+                                animation: 'flash-slow 0.8s infinite alternate' 
+                              }}
+                            >
+                              🚨 火警告警區段重播中
+                            </span>
+                          )}
+                          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace', background: '#0e1117', border: '1px solid var(--nvr-border)', padding: '5px 12px', borderRadius: '3px' }}>
+                            ⏱️ 當前時間戳: <span style={{ color: 'var(--info-blue)', fontSize: '14px' }}>{formatSecondsToHMS(playbackTime)}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
