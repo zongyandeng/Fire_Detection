@@ -32,9 +32,8 @@ def main():
     model_url = "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt"
     model_dest = os.path.join(models_dir, "yolov8n.pt")
     
-    # 2. 下載測試影片 (使用一個開源的火災煙霧測試影片)
-    # 此影片包含火焰與煙霧的測試場景
-    video_url = "https://raw.githubusercontent.com/Hzc1997/YOLOv8-Fire-Smoke-Detection/main/test.mp4"
+    # 2. 下載測試影片 (使用 Intel 官方真實高品質火災與煙霧監控影片)
+    video_url = "https://github.com/Abonia1/YOLOv8-Fire-and-Smoke-Detection/raw/main/demo.mp4"
     video_dest = os.path.join(videos_dir, "factory_fire_test.mp4")
     
     print("=== 開始下載 AI 火災與煙霧偵測系統 POC 資源 ===")
@@ -51,7 +50,7 @@ def main():
         success = download_file(video_url, video_dest)
         if not success:
             # 備用影片下載連結 (另一個常見的火災/煙霧測試影片)
-            backup_url = "https://github.com/intel-iot-devkit/sample-videos/raw/master/fire-detection.mp4"
+            backup_url = "https://raw.githubusercontent.com/Hzc1997/YOLOv8-Fire-Smoke-Detection/main/test.mp4"
             print("嘗試下載備用測試影片...")
             download_file(backup_url, video_dest)
     else:

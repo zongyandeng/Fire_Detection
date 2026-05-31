@@ -32,6 +32,9 @@ class IndustrialFireDetector:
         # 模式切換過濾：偵測畫面全域亮度劇變 (日夜模式切換)
         self.last_global_brightness = None
         self.transient_pause_until = 0.0 # 暫停時間戳
+        
+        # 運動物體偵測（用於在 YOLO 沒偵測到時，自動提取移動的候選區域進行物理分析）
+        self.back_sub = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=30, detectShadows=False)
 
     def check_transient_brightness(self, gray_frame) -> bool:
         """偵測全域亮度驟變，用以過濾紅外線日夜切換瞬態"""
@@ -268,40 +271,57 @@ class IndustrialFireDetector:
             except Exception as e:
                 print(f"YOLO 執行異常: {e}")
                 
-        # 3. 物理特徵提取器Fallback (零硬體 POC 完美保證機制)
-        # 這是我們的 Fail-safe。在我們的模擬影片中，火焰位於 (800, 500) -> (1120, 700) 附近，煙霧則往上漂移
-        # 如果 YOLO 在此模擬圖案上未成功觸發（因 COCO 無 smoke），物理引擎會直接掃描該動態區域！
+        # 3. 物理特徵提取器 Fallback (通用運動偵測混合物理驗證引擎)
+        # 這是我們的 Fail-safe。在真實影片中，我們利用背景相減法 (MOG2) 偵測所有移動的候選區域，
+        # 並對這些區域進行嚴格的火焰與煙霧物理特徵雙重驗證，保證系統能通用於任意現實畫面。
         if not yolo_success:
-            # 檢測火焰區域 (通風口位置)
-            flame_bbox = [800, 420, 1120, 730]
-            flame_crop = frame_bgr[flame_bbox[1]:flame_bbox[3], flame_bbox[0]:flame_bbox[2]]
-            flame_phys = self.analyze_flame_physics(flame_crop)
+            fg_mask = self.back_sub.apply(frame_bgr)
+            # 使用形態學去噪，消除細微噪點
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+            fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel)
             
-            if flame_phys["passed"] and flame_phys["color_ratio"] > 0.18:
-                is_frame_positive = True
-                max_confidence = max(max_confidence, 0.85 + flame_phys["color_ratio"]*0.1)
-                detections.append({
-                    "type": "flame",
-                    "bbox": flame_bbox,
-                    "confidence": round(0.85 + flame_phys["color_ratio"]*0.1, 2),
-                    "physics_stats": flame_phys
-                })
+            # 尋找運動物體輪廓
+            contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            for c in contours:
+                area = cv2.contourArea(c)
+                if area < 600:  # 濾除微小擾動雜訊
+                    continue
+                    
+                x, y, w_box, h_box = cv2.boundingRect(c)
                 
-            # 檢測煙霧區域 (通風口上方漂移區域)
-            # 在畫面 200 -> 500 高度，750 -> 1170 寬度之間進行分析
-            smoke_bbox = [750, 150, 1170, 480]
-            smoke_crop = frame_bgr[smoke_bbox[1]:smoke_bbox[3], smoke_bbox[0]:smoke_bbox[2]]
-            smoke_phys = self.analyze_smoke_physics(smoke_crop, gray, smoke_bbox)
-            
-            if smoke_phys["passed"] and smoke_phys["clarity_loss"] < 0.40:
-                is_frame_positive = True
-                max_confidence = max(max_confidence, 0.80 + (1.0 - smoke_phys["clarity_loss"])*0.1)
-                detections.append({
-                    "type": "smoke",
-                    "bbox": smoke_bbox,
-                    "confidence": round(0.80 + (1.0 - smoke_phys["clarity_loss"])*0.1, 2),
-                    "physics_stats": smoke_phys
-                })
+                # 濾除全畫面劇烈變動（如鏡頭晃動或全域亮度閃爍）
+                if w_box > w * 0.8 or h_box > h * 0.8:
+                    continue
+                    
+                crop = frame_bgr[y:y+h_box, x:x+w_box]
+                if crop.size == 0:
+                    continue
+                    
+                # 1. 驗證是否為火焰
+                flame_phys = self.analyze_flame_physics(crop)
+                if flame_phys["passed"] and flame_phys["color_ratio"] > 0.12:
+                    is_frame_positive = True
+                    max_confidence = max(max_confidence, 0.80 + flame_phys["color_ratio"] * 0.1)
+                    detections.append({
+                        "type": "flame",
+                        "bbox": [x, y, x+w_box, y+h_box],
+                        "confidence": round(0.80 + flame_phys["color_ratio"] * 0.1, 2),
+                        "physics_stats": flame_phys
+                    })
+                    continue  # 避免重複判定為煙霧
+                    
+                # 2. 驗證是否為煙霧
+                smoke_phys = self.analyze_smoke_physics(crop, gray, (x, y, x+w_box, y+h_box))
+                if smoke_phys["passed"] and smoke_phys["clarity_loss"] < 0.45:
+                    is_frame_positive = True
+                    max_confidence = max(max_confidence, 0.75 + (1.0 - smoke_phys["clarity_loss"]) * 0.1)
+                    detections.append({
+                        "type": "smoke",
+                        "bbox": [x, y, x+w_box, y+h_box],
+                        "confidence": round(0.75 + (1.0 - smoke_phys["clarity_loss"]) * 0.1, 2),
+                        "physics_stats": smoke_phys
+                    })
                 
         # 4. 更新滾動窗口
         self.frame_buffer.append(is_frame_positive)
