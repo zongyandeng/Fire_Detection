@@ -1513,7 +1513,13 @@ function App() {
                           }
                           setIsPlaybackPlaying(false);
                         }} 
+                        onClick={(e) => {
+                          try {
+                            e.target.showPicker();
+                          } catch (err) {}
+                        }}
                         className="nvr-input" 
+                        style={{ cursor: 'pointer' }}
                       />
                     </div>
                     
@@ -2077,6 +2083,12 @@ function App() {
                         className="nvr-input" 
                         value={filterDate} 
                         onChange={(e) => setFilterDate(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            e.target.showPicker();
+                          } catch (err) {}
+                        }}
+                        style={{ cursor: 'pointer' }}
                       />
                     </div>
                     <div>
