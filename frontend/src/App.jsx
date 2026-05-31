@@ -1,6 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// 定義工廠 12 路攝影機資料結構
+const INITIAL_CAMERAS = [
+  { id: 'CAM_A_DIST_BOARD', name: 'CH1 - A棟配電櫃 (AI監控火災核心)', area: 'A棟配電櫃', status: 'ONLINE', isAI: true, type: 'Realtime' },
+  { id: 'CAM_B_GENERATOR', name: 'CH2 - B棟發電機房 (溫濕度與負載)', area: 'B棟發電機房', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_C_RAW_WAREHOUSE', name: 'CH3 - C棟原料倉庫 (易燃物監測)', area: 'C棟原料倉庫', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_D_PRODUCTION_A', name: 'CH4 - D棟生產線A (機器人手臂區)', area: 'D棟生產線A', status: 'ONLINE', isAI: true, type: 'Simulated' },
+  { id: 'CAM_E_PACKING', name: 'CH5 - E棟包裝與出貨區 (輸送帶)', area: 'E棟包裝與出貨區', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_F_CHEM_STORE', name: 'CH6 - F棟化學品存放倉 (防爆安全)', area: 'F棟化學品存放倉', status: 'ONLINE', isAI: true, type: 'Simulated' },
+  { id: 'CAM_G_BOILER', name: 'CH7 - G棟鍋爐房 (蒸汽閥壓力監控)', area: 'G棟鍋爐房', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_H_SUBSTATION', name: 'CH8 - H棟高壓變電所 (絕緣體分析)', area: 'H棟高壓變電所', status: 'ONLINE', isAI: true, type: 'Simulated' },
+  { id: 'CAM_I_OUTER_WEST', name: 'CH9 - 工廠外圍西側走廊 (周界防護)', area: '工廠外圍西側走廊', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_J_MAIN_GATE', name: 'CH10 - 工廠大門主出入口 (人車識別)', area: '工廠大門主出入口', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_K_COOLING_TOWER', name: 'CH11 - 機房冷卻水塔區 (冷水循環)', area: '機房冷卻水塔區', status: 'ONLINE', isAI: false, type: 'Simulated' },
+  { id: 'CAM_L_WASTE_DISPOSAL', name: 'CH12 - 廢料處理與回收堆置區', area: '廢料處理與回收區', status: 'ONLINE', isAI: false, type: 'Simulated' }
+];
+
 function App() {
+  // SPA 路由狀態：main_menu | live_view | playback | add_camera | search | settings | information | help
+  const [activeView, setActiveView] = useState('main_menu');
+  const [screenLayout, setScreenLayout] = useState('grid-12'); // grid-1 | grid-4 | grid-9 | grid-12
+  const [selectedCameraId, setSelectedCameraId] = useState('CAM_A_DIST_BOARD');
+  const [cameras, setCameras] = useState(INITIAL_CAMERAS);
+  
+  // NVR 時間戳 (秒級即時更新)
+  const [nvrTime, setNvrTime] = useState(new Date().toLocaleString('zh-TW', { hour12: false }));
+  
+  // 後端同步狀態
   const [streamData, setStreamData] = useState(null);
   const [systemState, setSystemState] = useState({
     suspected_fire: false,
@@ -14,36 +40,42 @@ function App() {
     throttling_fps: 15
   });
   
-  const [activeTab, setActiveTab] = useState('discord'); // discord | email | line_tg
+  const [activeMobileTab, setActiveMobileTab] = useState('discord'); // discord | email | line_tg
   const [overheatMode, setOverheatMode] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [isPowerCycling, setIsPowerCycling] = useState(false); // 重啟 NVR 伺服器狀態
   
-  // 心跳折線圖數值快取 (用於繪製 SVG 心跳波形)
+  // 心跳折線圖數值快取
   const [heartbeatPoints, setHeartbeatPoints] = useState([50, 45, 55, 40, 50, 80, 20, 50, 48, 52, 50]);
-  
   const wsRef = useRef(null);
 
-  // 1. 初始化與 WebSocket 連線 (15 FPS 影音數據同步通道)
+  // 1. OSD 時間每秒更新
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNvrTime(new Date().toLocaleString('zh-TW', { hour12: false }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. 初始化與 WebSocket 連線
   useEffect(() => {
     connectWebSocket();
     
-    // 定期向後端發送 HTTP 心跳以保持連線 (模擬實體 NVR 的 1分鐘一次心跳)
+    // 定期向後端發送 HTTP 心跳
     const heartbeatInterval = setInterval(() => {
       fetch('http://127.0.0.1:8000/api/heartbeat', { method: 'POST' })
         .catch(err => console.error("心跳發送失敗:", err));
-    }, 20000); // 每 20 秒發送一次，後端 60 秒超時
+    }, 20000); 
 
-    // 每秒為心跳折線圖更新一個點
+    // 心跳圖波形更新
     const svgInterval = setInterval(() => {
       setHeartbeatPoints(prev => {
         const next = [...prev.slice(1)];
-        // 隨機產生一個心跳波動點 (如果系統故障則是一條平線)
         if (systemState.system_fault) {
-          next.push(50); // 死線
+          next.push(50); // 故障死線
         } else {
-          // 模擬正常心跳
           const base = 50;
-          const peak = Math.random() > 0.7 ? (Math.random() > 0.5 ? 85 : 15) : (base + Math.random()*8 - 4);
+          const peak = Math.random() > 0.75 ? (Math.random() > 0.5 ? 82 : 18) : (base + Math.random()*10 - 5);
           next.push(peak);
         }
         return next;
@@ -70,7 +102,6 @@ function App() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setStreamData(data);
-      // 同步系統狀態
       if (data.state) {
         setSystemState(prev => ({
           ...prev,
@@ -96,7 +127,7 @@ function App() {
     };
   };
 
-  // 定期拉取 REST API 來同步歷史日誌與統計數據
+  // 3. 定期拉取 REST API
   useEffect(() => {
     const fetchState = () => {
       fetch('http://127.0.0.1:8000/api/state')
@@ -117,21 +148,21 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // 2. API 控制：手動確認與排除
+  // 4. API 控制：手動確認與排除
   const handleConfirmFire = () => {
     fetch('http://127.0.0.1:8000/api/confirm', { method: 'POST' })
       .then(res => res.json())
       .then(data => {
-        console.log("🔥 火警確認:", data);
+        console.log("🔥 火警手動確認完成！");
       })
-      .catch(err => alert("確認失敗，請確認後端是否運行"));
+      .catch(err => alert("確認失敗，請確認後端服務是否在運行。"));
   };
 
   const handleDismissAlarm = () => {
     fetch('http://127.0.0.1:8000/api/dismiss', { method: 'POST' })
       .then(res => res.json())
       .then(data => {
-        console.log("🟢 警報排除與負樣本收集:", data);
+        console.log("🟢 警報排除完成，已儲存負樣本！");
         setSystemState(prev => ({
           ...prev,
           negative_samples_count: data.negative_samples_count
@@ -150,525 +181,1109 @@ function App() {
     }).catch(err => console.error("過熱測試 API 錯誤:", err));
   };
 
-  // 輔助獲取檢測元數據
+  // 模擬重啟 NVR 伺服器
+  const handlePowerCycle = () => {
+    setIsPowerCycling(true);
+    setTimeout(() => {
+      setIsPowerCycling(false);
+      setActiveView('main_menu');
+    }, 2500);
+  };
+
+  // 模擬其他攝影機的動態 Canvas 渲染輔助
+  const renderSimulatedChannel = (camId) => {
+    switch (camId) {
+      case 'CAM_B_GENERATOR':
+        return (
+          <div style={{ color: '#10b981', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', textAlign: 'left', padding: '10px' }}>
+            <div style={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid #333', paddingBottom: '3px' }}>GEN-SET #02 TELEMETRY</div>
+            <div>STATUS: <strong style={{ color: '#10b981' }}>RUNNING</strong></div>
+            <div>LOAD: <strong>{(72.4 + Math.random()*2).toFixed(1)} kW</strong></div>
+            <div>COOLANT TEMP: <strong>{(82.1 + Math.random()*0.5).toFixed(1)} °C</strong></div>
+            <div>EXHAUST TEMP: <strong>345.2 °C</strong></div>
+            <div>LINE VOLTAGE: <strong>381.4 V</strong></div>
+            <div style={{ marginTop: '5px', display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span className="led-indicator led-green"></span>
+              <span style={{ color: '#8a94a6', fontSize: '9px' }}>CONTROLLER LINK OK</span>
+            </div>
+          </div>
+        );
+      case 'CAM_C_RAW_WAREHOUSE':
+        return (
+          <div style={{ color: '#8a94a6', position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            {/* 繪製原料倉庫幾何線框模擬 */}
+            <svg width="80%" height="80%" viewBox="0 0 100 60" style={{ opacity: 0.25 }}>
+              <rect x="10" y="10" width="30" height="20" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <rect x="10" y="30" width="30" height="20" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <rect x="50" y="10" width="40" height="40" fill="none" stroke="#fff" strokeWidth="0.5" />
+              <line x1="10" y1="10" x2="50" y2="10" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
+              <line x1="40" y1="50" x2="90" y2="50" stroke="#fff" strokeWidth="0.5" strokeDasharray="2" />
+            </svg>
+            <div style={{ position: 'absolute', bottom: '15px', color: '#ff9900', fontSize: '9px', fontWeight: 'bold' }}>
+              ⚠️ [INFRARED] CH3 ZONE SECURE
+            </div>
+          </div>
+        );
+      case 'CAM_D_PRODUCTION_A':
+        return (
+          <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#090a0c' }}>
+            {/* 機器人手臂與輸送帶動畫模擬 */}
+            <div style={{ width: '80%', height: '8px', background: '#333', borderRadius: '4px', position: 'relative', overflow: 'hidden', marginBottom: '15px' }}>
+              <div style={{ position: 'absolute', width: '20px', height: '100%', background: '#444', animation: 'conveyor-run 2s infinite linear' }}></div>
+            </div>
+            <div style={{ display: 'flex', gap: '2px' }}>
+              <div style={{ width: '6px', height: '25px', background: '#ff3366', animation: 'arm-move 1.5s infinite alternate' }}></div>
+              <div style={{ width: '6px', height: '15px', background: '#333' }}></div>
+            </div>
+            <div style={{ fontSize: '9px', color: '#8a94a6', marginTop: '8px' }}>
+              AI: CONVEYOR FEEDING RATE - 85% | CAM ACTIVE
+            </div>
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes conveyor-run {
+                0% { left: -20px; }
+                100% { left: 100%; }
+              }
+              @keyframes arm-move {
+                0% { transform: rotate(15deg); }
+                100% { transform: rotate(-15deg); }
+              }
+            `}} />
+          </div>
+        );
+      case 'CAM_F_CHEM_STORE':
+        return (
+          <div style={{ color: '#f59e0b', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', textAlign: 'left', padding: '10px' }}>
+            <div style={{ fontWeight: 'bold', color: '#fff', borderBottom: '1px solid #333', paddingBottom: '3px' }}>防爆化學倉監控</div>
+            <div>儲罐 A (有機溶劑): <strong>14.2% 容量</strong></div>
+            <div>儲罐 B (助燃劑): <strong>92.1% (HIGH)</strong></div>
+            <div>環境 VOC 濃度: <strong style={{ color: '#10b981' }}>2.1 ppm (安全)</strong></div>
+            <div>防爆冷卻閥門: <strong>AUTO LOCKDOWN MODE</strong></div>
+            <div style={{ border: '1px solid #ff9900', color: '#ff9900', padding: '3px', borderRadius: '2px', fontSize: '9px', textAlign: 'center', marginTop: '3px', fontWeight: 'bold' }}>
+              ⚡ EX-PROOF STATUS: ACTIVE
+            </div>
+          </div>
+        );
+      case 'CAM_H_SUBSTATION':
+        return (
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#3b82f6', position: 'relative' }}>
+            <div style={{ fontSize: '30px', animation: 'flash-slow 1s infinite alternate' }}>⚡</div>
+            <div style={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>HIGH VOLTAGE MAIN FEEDER</div>
+            <div style={{ fontSize: '9px', color: '#8a94a6', marginTop: '2px' }}>
+              VOLTAGE: 22.8 kV | CURRENT: 145.2 A | PF: 0.98
+            </div>
+          </div>
+        );
+      case 'CAM_G_BOILER':
+        return (
+          <div style={{ color: '#fff', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', padding: '10px' }}>
+            <div style={{ fontWeight: 'bold', borderBottom: '1px solid #333', paddingBottom: '3px' }}>BOILER #01 ANALYZER</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>主蒸汽壓力:</span>
+              <strong style={{ color: '#f59e0b' }}>{(1.25 + Math.random()*0.02).toFixed(2)} MPa</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>爐膛溫度:</span>
+              <strong>{(1050 + Math.random()*5).toFixed(0)} °C</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>給水流量:</span>
+              <strong>14.2 t/h</strong>
+            </div>
+            <div style={{ background: '#222', borderRadius: '3px', padding: '4px', fontSize: '9px', color: '#10b981', textAlign: 'center', marginTop: '4px' }}>
+              🟢 VALVE ACTUATOR: NORMAL (42.1%)
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div style={{ color: '#555866', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '8px' }}>
+            <span style={{ fontSize: '24px' }}>🎥</span>
+            <span style={{ fontSize: '10px', color: '#8a94a6' }}>CH {camId.slice(-1) || 'N'} SIMULATION OK</span>
+            <span style={{ fontSize: '8px', color: '#444' }}>MONITORING ACTIVE</span>
+          </div>
+        );
+    }
+  };
+
   const activeDetections = streamData?.analysis?.detections || [];
   const latestTelemetry = streamData?.telemetry || {
-    device_name: "RTX 4060 Ti 16GB (Simulated)",
-    temperature: 58.0,
-    fan_speed: 45,
-    memory_percent: 25.0,
-    gpu_utilization: 45.0,
+    device_name: "RTX 4060 Ti (NVR Simulated)",
+    temperature: 54.0,
+    fan_speed: 40,
+    memory_percent: 22.0,
+    gpu_utilization: 42.0,
     status: "OK"
   };
 
+  // 當重啟模擬時，渲染加載
+  if (isPowerCycling) {
+    return (
+      <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000', color: '#ff3366', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+        <div style={{ fontSize: '40px', fontWeight: 'bold', letterSpacing: '2px', animation: 'flash-fast 0.6s infinite alternate' }}>🚨 SYSTEM POWER CYCLING 🚨</div>
+        <div style={{ width: '300px', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', background: '#ff3366', width: '100%', animation: 'power-bar 2.5s linear' }}></div>
+        </div>
+        <div style={{ color: '#8a94a6', fontFamily: 'monospace' }}>REBOOTING NVR AI LINUX DAEMON... PLEASE WAIT</div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes power-bar {
+            0% { width: 0%; }
+            100% { width: 100%; }
+          }
+        `}} />
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* 工業網格背景 */}
       <div className="industrial-grid"></div>
       
-      {/* 緊急狀態下全螢幕背景波紋效果 */}
+      {/* 警報防禦全域覆蓋紅框閃爍 */}
       {systemState.confirmed_fire && <div className="alarm-overlay-red"></div>}
-      {!systemState.confirmed_fire && systemState.suspected_fire && <div className="alarm-overlay-red" style={{ animationDuration: '2s' }}></div>}
+      {!systemState.confirmed_fire && systemState.suspected_fire && <div className="alarm-overlay-red" style={{ animationDuration: '1.5s', border: '5px solid var(--alarm-yellow)' }}></div>}
       {systemState.system_fault && <div className="alarm-overlay-yellow"></div>}
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '20px', maxWidth: '1800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '100vh' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--nvr-bg)', position: 'relative', zIndex: 1 }}>
         
-        {/* ================= HEADER 頂部狀態列 ================= */}
-        <header className="glass-panel" style={{ padding: '15px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '1.6em', fontWeight: '800', background: 'linear-gradient(90deg, #ff5a00, #ff0055)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              🚨 工業 NVR AI 整合式火災與煙霧防禦監控系統
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9em', marginTop: '4px' }}>
-              策略架構: 方案 B (RTX 4060 Ti GPU 本地伺服器) | 部署模式: 無人值守自動回報
-            </p>
+        {/* ================= NVR 頂部系統欄 ================= */}
+        <header className="nvr-header">
+          <div className="nvr-brand">
+            <span style={{ fontSize: '20px' }}>🏭</span>
+            <div>
+              <div className="nvr-logo-text">TP-LINK VIGI | 工業級 NVR AI 智慧火災防護防禦控制台</div>
+              <div style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', marginTop: '2px' }}>
+                安全防禦核心: 雙重特徵驗證 AI 演算法 | 分勵脫扣器 (Shunt Trip) 自動防護系統
+              </div>
+            </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-            {/* 系統心跳波形圖 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>心跳遙測:</span>
-              <svg width="120" height="30" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* 心跳遙測 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>AI 遙測心跳:</span>
+              <svg width="90" height="20" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '2px', border: '1px solid var(--nvr-border)' }}>
                 <polyline
                   fill="none"
-                  stroke={systemState.system_fault ? "var(--system-fault-yellow)" : "var(--neon-blue)"}
-                  strokeWidth="2"
-                  points={heartbeatPoints.map((p, idx) => `${idx * 12}, ${p * 0.3}`).join(' ')}
-                  className="heartbeat-line"
+                  stroke={systemState.system_fault ? "var(--alarm-yellow)" : "var(--info-blue)"}
+                  strokeWidth="1.5"
+                  points={heartbeatPoints.map((p, idx) => `${idx * 9}, ${p * 0.2}`).join(' ')}
                 />
               </svg>
             </div>
 
-            {/* 心跳 LED 與故障指示 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* 連線狀態指標 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
               {systemState.system_fault ? (
                 <>
                   <span className="led-indicator led-yellow"></span>
-                  <span style={{ color: 'var(--system-fault-yellow)', fontWeight: 'bold', fontSize: '0.9em' }}>SYSTEM FAULT (安全防護離線)</span>
+                  <span style={{ color: 'var(--alarm-yellow)', fontWeight: 'bold' }}>SYSTEM FAULT (連線異常)</span>
                 </>
               ) : wsConnected ? (
                 <>
-                  <span className="led-indicator led-blue"></span>
-                  <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.9em' }}>SYSTEM_ONLINE (監控正常)</span>
+                  <span className="led-indicator led-green"></span>
+                  <span style={{ color: 'var(--normal-green)', fontWeight: 'bold' }}>MONITORING ONLINE</span>
                 </>
               ) : (
                 <>
                   <span className="led-indicator led-red"></span>
-                  <span style={{ color: 'var(--warning-red)', fontWeight: 'bold', fontSize: '0.9em' }}>CONNECTING...</span>
+                  <span style={{ color: 'var(--alarm-red)', fontWeight: 'bold' }}>CONNECTING...</span>
                 </>
               )}
+            </div>
+
+            {/* 系統時間 */}
+            <div style={{ fontFamily: 'monospace', color: '#fff', fontSize: '12px', background: '#1c1e24', padding: '4px 8px', borderRadius: '3px', border: '1px solid var(--nvr-border)' }}>
+              📅 {nvrTime}
             </div>
           </div>
         </header>
 
-        {/* ================= MAIN CONTENT 主畫面區域 ================= */}
-        <main style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '20px', flex: 1 }}>
+        {/* ================= 主工作視窗 ================= */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           
-          {/* 1. 左面板：實時監控影像與物理分析 */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Live Stream Panel */}
-            <div className={`glass-panel ${systemState.confirmed_fire ? 'confirmed-active' : systemState.suspected_fire ? 'suspected-active' : systemState.system_fault ? 'fault-active' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '15px 20px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'red', display: 'inline-block', animation: 'led-pulse 0.5s infinite alternate' }}></span>
-                  <strong style={{ letterSpacing: '0.05em' }}>LIVE VIEW - A棟配電盤監控通道</strong>
-                </div>
-                <span className="glass-panel" style={{ fontSize: '0.75em', padding: '3px 8px', color: 'var(--neon-blue)' }}>
-                  1080P / H.265 / CBR 模擬 / {systemState.throttling_fps} FPS
-                </span>
-              </div>
+          {/* 左側邊欄：獨立功能 SPA 切換按鈕 (照片下半部功能的整合) */}
+          <nav style={{ width: '80px', backgroundColor: '#0b0c0e', borderRight: '2px solid var(--nvr-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '15px 0', gap: '15px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+              <button 
+                title="主選單 (Main Menu)" 
+                onClick={() => setActiveView('main_menu')} 
+                className={`nvr-btn ${activeView === 'main_menu' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                🏠
+              </button>
               
-              {/* 影像顯示畫布 */}
-              <div style={{ flex: 1, background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', minHeight: '400px' }}>
-                {streamData?.image ? (
-                  <img
-                    src={streamData.image}
-                    alt="Industrial NVR Realtime Stream"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
-                ) : (
-                  <div style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3em', marginBottom: '10px', animation: 'led-pulse 1s infinite alternate' }}>🎥</div>
-                    <div>正在載入 NVR RTSP 視訊串流...</div>
-                    <div style={{ fontSize: '0.8em', color: '#666', marginTop: '5px' }}>使用 OpenCV 解碼工廠測試影片</div>
-                  </div>
-                )}
-                
-                {/* 浮動狀態貼標 */}
-                {systemState.confirmed_fire && (
-                  <div style={{ position: 'absolute', top: '20px', left: '20px', background: 'rgba(255,0,85,0.9)', color: 'white', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1.1em', animation: 'led-pulse 0.5s infinite alternate', boxShadow: '0 4px 15px rgba(255,0,85,0.5)' }}>
-                    🔥 已確認起火！機台電源已切斷
-                  </div>
-                )}
-                {!systemState.confirmed_fire && systemState.suspected_fire && (
-                  <div style={{ position: 'absolute', top: '20px', left: '20px', background: 'rgba(255,90,0,0.9)', color: 'white', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1.1em', animation: 'led-pulse 1s infinite alternate' }}>
-                    ⚠️ 疑似火焰特徵！無人值守倒數: {systemState.countdown_remaining}s
-                  </div>
-                )}
-                {systemState.system_fault && (
-                  <div style={{ position: 'absolute', top: '20px', left: '20px', background: 'rgba(255,183,0,0.95)', color: 'black', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold', fontSize: '1.1em' }}>
-                    ⚠️ 系統離線故障: {systemState.system_fault_reason}
-                  </div>
-                )}
-              </div>
+              <div style={{ width: '30px', height: '2px', background: 'var(--nvr-border)', margin: '5px 0' }}></div>
+
+              <button 
+                title="實時監控 (Live View)" 
+                onClick={() => { setActiveView('live_view'); }} 
+                className={`nvr-btn ${activeView === 'live_view' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                📺
+              </button>
+              <button 
+                title="歷史回放 (Playback)" 
+                onClick={() => setActiveView('playback')} 
+                className={`nvr-btn ${activeView === 'playback' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                📂
+              </button>
+              <button 
+                title="新增攝影機 (Add Camera)" 
+                onClick={() => setActiveView('add_camera')} 
+                className={`nvr-btn ${activeView === 'add_camera' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                ➕
+              </button>
+              <button 
+                title="搜尋與日誌 (Search)" 
+                onClick={() => setActiveView('search')} 
+                className={`nvr-btn ${activeView === 'search' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                🔍
+              </button>
+              <button 
+                title="遙測與資訊 (Information)" 
+                onClick={() => setActiveView('information')} 
+                className={`nvr-btn ${activeView === 'information' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                📊
+              </button>
+              <button 
+                title="系統設定 (Settings)" 
+                onClick={() => setActiveView('settings')} 
+                className={`nvr-btn ${activeView === 'settings' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                ⚙️
+              </button>
             </div>
 
-            {/* 物理驗證指標波形 (實時讀取後端物理引擎的數據) */}
-            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <strong style={{ fontSize: '0.95em', color: 'var(--text-secondary)', borderLeft: '3px solid var(--neon-blue)', paddingLeft: '8px' }}>
-                二階段物理特徵驗證指標 (物理引擎實時特徵提取)
-              </strong>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+              <button 
+                title="操作說明 (Help)" 
+                onClick={() => setActiveView('help')} 
+                className={`nvr-btn ${activeView === 'help' ? 'active' : ''}`}
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px' }}
+              >
+                ❓
+              </button>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                {/* 火焰色彩與閃爍頻率 */}
-                <div className="glass-panel" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>火焰色彩分布 (YCbCr/HSI 比率)</span>
-                    <strong style={{ color: 'var(--neon-orange)' }}>
-                      {(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0).toFixed(1)}%
-                    </strong>
-                  </div>
-                  <div style={{ height: '6px', background: '#222', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ 
-                      height: '100%', 
-                      background: 'linear-gradient(90deg, #ff9900, #ff5a00)', 
-                      width: `${(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0)}%`,
-                      transition: 'width 0.2s'
-                    }}></div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>閃爍頻率 (標準 5Hz~10Hz)</span>
-                    <strong style={{ color: 'var(--neon-blue)' }}>
-                      {(activeDetections.find(d => d.type === 'flame')?.stats?.flicker_freq || 0).toFixed(1)} Hz
-                    </strong>
-                  </div>
-                  <span style={{ fontSize: '0.75em', color: '#666' }}>
-                    狀態: {activeDetections.find(d => d.type === 'flame')?.stats?.details?.flicker ? "🟢 正常閃爍區間" : "⚪ 未達閃爍閥值"}
-                  </span>
-                </div>
-
-                {/* 煙霧膨脹與高頻清晰度損失 */}
-                <div className="glass-panel" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>煙霧高頻損失 (Laplacian Blurring)</span>
-                    <strong style={{ color: '#aaa' }}>
-                      {(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0).toFixed(0)}%
-                    </strong>
-                  </div>
-                  <div style={{ height: '6px', background: '#222', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ 
-                      height: '100%', 
-                      background: 'linear-gradient(90deg, #00f0ff, #ff0055)', 
-                      width: `${(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0)}%`,
-                      transition: 'width 0.2s'
-                    }}></div>
-                  </div>
-                  <span style={{ fontSize: '0.75em', color: '#666', marginTop: '4px', display: 'block' }}>
-                    高頻紋理損失: {activeDetections.find(d => d.type === 'smoke')?.stats?.details?.high_freq_loss ? "🚨 背景已被煙霧遮蔽模糊" : "🟢 背景清晰度正常"}
-                  </span>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.85em', color: 'var(--text-secondary)' }}>
-                    <span>時空向上浮力斜率</span>
-                    <span style={{ color: activeDetections.find(d => d.type === 'smoke')?.stats?.details?.buoyancy ? "var(--normal-green)" : "#666" }}>
-                      斜率: {(activeDetections.find(d => d.type === 'smoke')?.stats?.y_trend || 0.0).toFixed(2)} {activeDetections.find(d => d.type === 'smoke')?.stats?.details?.buoyancy ? "(向上漂移)" : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <button 
+                title="關機 / 重啟 NVR" 
+                onClick={handlePowerCycle} 
+                className="nvr-btn"
+                style={{ width: '50px', height: '50px', borderRadius: '8px', padding: 0, fontSize: '20px', backgroundColor: 'rgba(255, 51, 102, 0.1)', borderColor: 'var(--alarm-red)' }}
+              >
+                🛑
+              </button>
             </div>
-          </section>
+          </nav>
 
-          {/* 2. 中面板：自動倒數、雙重確認與連鎖防禦狀態 */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* 右側主要顯示區域：根據 activeView 來切換 */}
+          <main style={{ flex: 1, backgroundColor: '#090a0c', padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             
-            {/* 警報與人機確認決策控制台 */}
-            <div className="glass-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', justifycontent: 'center', gap: '20px', flex: 1, minHeight: '300px', position: 'relative' }}>
-              <strong style={{ fontSize: '1.1em', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>
-                🚨 系統自動防禦與人機聯控中心
-              </strong>
-              
-              {/* 疑似警報觸發時呈現的動態框 */}
-              {systemState.suspected_fire && !systemState.confirmed_fire ? (
-                <div className="glass-panel suspected-active" style={{ padding: '20px', textAlign: 'center', background: 'rgba(255,90,0,0.05)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <h3 style={{ color: 'var(--neon-orange)', fontSize: '1.3em', fontWeight: 'bold' }}>🚨 偵測到疑似起火特徵！</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9em' }}>
-                    現場無人看守。系統正在執行 **10 秒無人值守倒數**，若倒數結束無人介入，將自動判定為真實火警並推送警報。
-                  </p>
-                  
-                  {/* 大倒數圓環 */}
-                  <div style={{ margin: '15px auto', width: '110px', height: '110px', borderRadius: '50%', border: '4px solid var(--neon-orange)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 15px rgba(255,90,0,0.3)', animation: 'led-pulse 0.5s infinite alternate' }}>
-                    <span style={{ fontSize: '2em', fontWeight: '900', color: 'var(--neon-orange)' }}>
-                      {systemState.countdown_remaining}
-                    </span>
-                    <span style={{ fontSize: '0.7em', color: 'var(--text-secondary)' }}>秒後通報</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button className="btn-danger" style={{ padding: '12px', borderRadius: '6px' }} onClick={handleConfirmFire}>
-                      🔥 立即確認火警
-                    </button>
-                    <button className="btn-secondary" style={{ padding: '12px', borderRadius: '6px', color: 'var(--normal-green)' }} onClick={handleDismissAlarm}>
-                      🟢 排除此誤報
-                    </button>
-                  </div>
+            {/* 全域警報橫幅指示 (當有疑似或正式起火時，頂部顯示，符合工業實用安全通知) */}
+            {(systemState.suspected_fire || systemState.confirmed_fire) && (
+              <div style={{ 
+                padding: '12px 20px', 
+                backgroundColor: systemState.confirmed_fire ? 'var(--alarm-red)' : 'var(--alarm-yellow)', 
+                color: systemState.confirmed_fire ? '#fff' : '#000',
+                borderRadius: '4px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontWeight: 'bold',
+                animation: 'flash-fast 1s infinite alternate',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span>🚨</span>
+                  <span>
+                    {systemState.confirmed_fire 
+                      ? '【火災警報確認】A棟配電櫃已確認起火！分勵脫扣器切斷該區供電保護，多軌回報已發送！' 
+                      : `【疑似火災預警】A棟配電櫃偵測到疑似火災物理特徵！無人值守自動倒數通報剩餘: ${systemState.countdown_remaining}s`}
+                  </span>
                 </div>
-              ) : systemState.confirmed_fire ? (
-                <div className="glass-panel confirmed-active" style={{ padding: '25px', textAlign: 'center', background: 'rgba(255,0,85,0.08)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <h3 style={{ color: 'var(--warning-red)', fontSize: '1.4em', fontWeight: 'bold', animation: 'led-pulse 0.5s infinite alternate' }}>
-                    🚨 【極度危險】火警已確認！
-                  </h3>
-                  <p style={{ color: 'var(--text-primary)', fontSize: '0.9em' }}>
-                    防禦鎖定：分勵脫扣器已切斷電源保護設備。已自動發送 Email、Discord 嵌入卡片、Line/Telegram 通知。
-                  </p>
-                  
-                  <div style={{ fontSize: '4em', margin: '10px 0' }}>🔥</div>
-
-                  <button className="btn-secondary" style={{ padding: '12px', borderRadius: '6px', width: '100%', borderColor: 'rgba(0,255,102,0.4)', color: 'var(--normal-green)' }} onClick={handleDismissAlarm}>
-                    🟢 安全解除警報 (復歸機台)
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={handleConfirmFire} className="nvr-btn" style={{ backgroundColor: '#000', color: '#fff', border: 'none', padding: '4px 12px', fontSize: '12px' }}>
+                    🔥 立即人工確認
+                  </button>
+                  <button onClick={handleDismissAlarm} className="nvr-btn" style={{ backgroundColor: '#fff', color: '#000', border: 'none', padding: '4px 12px', fontSize: '12px' }}>
+                    🟢 安全解除警報
                   </button>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1, color: '#4b5563', textAlign: 'center' }}>
-                  <div style={{ fontSize: '3.5em', marginBottom: '15px' }}>🟢</div>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '1.1em' }}>機房安全防護中</strong>
-                  <p style={{ fontSize: '0.85em', color: 'var(--text-secondary)', marginTop: '6px', maxWidth: '250px' }}>
-                    AI 影像雙重物理分析演算法 24/7 持續分析串流中。未檢測到异常特徵。
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* 實體硬體防禦連動狀態 (Shunt Trip 分勵脫扣器) */}
-            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <strong style={{ fontSize: '0.95em', color: 'var(--text-secondary)', borderLeft: '3px solid var(--warning-red)', paddingLeft: '8px' }}>
-                分勵脫扣器 (Shunt Trip) 與物理保護狀態
-              </strong>
-              
-              <div className="glass-panel" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: systemState.shunt_trip_triggered ? 'rgba(255,0,85,0.05)' : 'rgba(0,255,102,0.03)', borderColor: systemState.shunt_trip_triggered ? 'var(--warning-red)' : 'rgba(0,255,102,0.2)' }}>
-                <div>
-                  <span style={{ fontSize: '0.8em', color: 'var(--text-secondary)', display: 'block' }}>配電盤斷路器連動狀態 (Shunt Trip Switch)</span>
-                  <strong style={{ fontSize: '1.15em', color: systemState.shunt_trip_triggered ? 'var(--warning-red)' : 'var(--normal-green)' }}>
-                    {systemState.shunt_trip_triggered ? "⚡ 電源已安全斷開 (PROTECTED)" : "🔌 正常通電供電中 (MONITORING)"}
-                  </strong>
-                </div>
-                <span className={`led-indicator ${systemState.shunt_trip_triggered ? 'led-red' : 'led-green'}`} style={{ width: '15px', height: '15px' }}></span>
               </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', color: 'var(--text-secondary)', padding: '0 5px' }}>
-                <span>本地聲光警報器:</span>
-                <span style={{ color: '#555' }}>🚫 已依工廠無人配置手動免除</span>
-              </div>
-            </div>
-          </section>
+            )}
 
-          {/* 3. 右面板：行動端推送模擬器與 GPU 遙測 */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* GPU 遙測監控面板 (遙測與自適應降載測試) */}
-            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.95em', color: 'var(--text-secondary)', borderLeft: '3px solid var(--neon-orange)', paddingLeft: '8px' }}>
-                  RTX 4060 Ti GPU 顯示卡遙測
-                </strong>
-                <button 
-                  onClick={handleToggleOverheat} 
-                  className="glass-panel" 
-                  style={{ 
-                    fontSize: '0.75em', 
-                    padding: '3px 8px', 
-                    cursor: 'pointer', 
-                    background: overheatMode ? 'rgba(255,0,85,0.2)' : 'rgba(255,255,255,0.03)',
-                    borderColor: overheatMode ? 'var(--warning-red)' : 'var(--border-glass)',
-                    color: overheatMode ? 'var(--warning-red)' : 'var(--text-secondary)',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {overheatMode ? "🔥 關閉過熱模擬" : "⚡ 模擬 GPU 過熱降載"}
-                </button>
-              </div>
-
-              {/* 溫度表與使用率 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '15px', margin: '5px 0' }}>
-                <div className="glass-panel" style={{ padding: '10px', background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ fontSize: '1.8em' }}>🌡️</div>
-                  <div>
-                    <span style={{ fontSize: '0.75em', color: 'var(--text-secondary)', display: 'block' }}>核心溫度 (自適應防當機)</span>
-                    <strong style={{ fontSize: '1.4em', color: latestTelemetry.status === 'CRITICAL' ? 'var(--warning-red)' : latestTelemetry.status === 'WARNING' ? 'var(--system-fault-yellow)' : 'var(--text-primary)' }}>
-                      {latestTelemetry.temperature} °C
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="glass-panel" style={{ padding: '10px', background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '1.8em' }}>🌀</div>
-                  <div>
-                    <span style={{ fontSize: '0.75em', color: 'var(--text-secondary)', display: 'block' }}>風扇轉速</span>
-                    <strong style={{ fontSize: '1.3em' }}>{latestTelemetry.fan_speed} %</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85em', color: 'var(--text-secondary)' }}>
-                <div>顯存佔用率: <strong style={{ color: 'white' }}>{latestTelemetry.memory_percent}%</strong></div>
-                <div>GPU 使用率: <strong style={{ color: 'white' }}>{latestTelemetry.gpu_utilization}%</strong></div>
-              </div>
-              
-              {latestTelemetry.status === 'CRITICAL' && (
-                <div style={{ background: 'rgba(255,0,85,0.1)', border: '1px solid var(--warning-red)', color: 'var(--warning-red)', padding: '8px', borderRadius: '4px', fontSize: '0.8em', textAlign: 'center', fontWeight: 'bold' }}>
-                  🚨 過熱保護觸發：AI 推理已自動從 15FPS 降載至 5FPS 防護當機！
-                </div>
-              )}
-            </div>
-
-            {/* 行動端多媒體推送模擬器 (Wow 視覺高擬真外殼) */}
-            <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '12px 15px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.9em' }}>📱 行動多媒體回報展示 (黃金三元素)</strong>
+            {/* ================= SPA 畫面 1: 主選單 (Main Menu - 完美復刻照片選單) ================= */}
+            {activeView === 'main_menu' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', alignItems: 'center', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
                 
-                {/* 軟體切換 Tabs */}
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  {['discord', 'email', 'line_tg'].map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: '3px',
-                        fontSize: '0.75em',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: activeTab === tab ? 'var(--neon-orange)' : 'rgba(255,255,255,0.05)',
-                        color: 'white',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {tab === 'discord' ? 'Discord' : tab === 'email' ? 'Email' : 'Line / TG'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 手機外殼與顯示內容 */}
-              <div style={{ flex: 1, background: '#18191f', padding: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '350px' }}>
-                <div style={{ 
-                  width: '100%', 
-                  maxWidth: '310px', 
-                  height: '420px', 
-                  borderRadius: '30px', 
-                  border: '8px solid #2d3142', 
-                  background: '#090a0f', 
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}>
-                  {/* 手機劉海屏 */}
-                  <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '110px', height: '18px', background: '#2d3142', borderRadius: '0 0 12px 12px', zIndex: 10 }}></div>
-                  
-                  {/* 手機螢幕頂部列 */}
-                  <div style={{ padding: '18px 15px 5px 15px', display: 'flex', justifyContent: 'space-between', fontSize: '0.65em', color: '#666', background: '#0e0f14' }}>
-                    <span>10:25 AM</span>
-                    <span>🔋 100%</span>
+                {/* 復刻照片上半部：畫面分割切換面板 */}
+                <div className="nvr-panel" style={{ width: '100%', padding: '25px 30px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--nvr-text)' }}>📺 畫面電視牆分割控制 (Screen Division Control)</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>TP-LINK VIGI SYSTEM V2.0</span>
                   </div>
 
-                  {/* 手機畫面 */}
-                  <div style={{ flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '15px' }}>
+                    {[
+                      { key: 'grid-1', label: '1-Screen', icon: 'Ⅰ' },
+                      { key: 'grid-4', label: '4-Screen', icon: '田' },
+                      { key: 'grid-9', label: '9-Screen', icon: '▦' },
+                      { key: 'grid-12', label: '12-Screen', icon: '⧠' },
+                    ].map(layout => (
+                      <button 
+                        key={layout.key} 
+                        onClick={() => {
+                          setScreenLayout(layout.key);
+                          setActiveView('live_view');
+                        }}
+                        className="nvr-btn"
+                        style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px' }}
+                      >
+                        <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{layout.icon}</span>
+                        <span style={{ fontSize: '11px' }}>{layout.label}</span>
+                      </button>
+                    ))}
+
+                    <div style={{ width: '1px', background: 'var(--nvr-border)', margin: '0 5px' }}></div>
+
+                    {/* 照片中其他分割控制圖示模擬 */}
+                    <button className="nvr-btn" onClick={() => { setScreenLayout('grid-12'); setActiveView('live_view'); }} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                      <span style={{ fontSize: '18px' }}>◁</span>
+                      <span style={{ fontSize: '11px' }}>Prev Screen</span>
+                    </button>
+                    <button className="nvr-btn" onClick={() => { setScreenLayout('grid-12'); setActiveView('live_view'); }} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                      <span style={{ fontSize: '18px' }}>▷</span>
+                      <span style={{ fontSize: '11px' }}>Next Screen</span>
+                    </button>
+                    <button className="nvr-btn" onClick={() => alert("自動畫面輪巡輪播已開啟！")} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', border: '1px solid var(--info-blue)' }}>
+                      <span style={{ fontSize: '18px', color: 'var(--info-blue)' }}>🔄</span>
+                      <span style={{ fontSize: '11px' }}>Start Switch</span>
+                    </button>
+                    <button className="nvr-btn" onClick={() => alert("影像畫質渲染切換：高清 (HD)")} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                      <span style={{ fontSize: '18px' }}>🎨</span>
+                      <span style={{ fontSize: '11px' }}>Picture Mode</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 復刻照片下半部：核心大按鈕選單 (Settings 紅框效果) */}
+                <div className="nvr-panel" style={{ width: '100%', padding: '30px 40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '8px', color: 'var(--nvr-text-muted)', fontSize: '12px' }}>
+                    ⚙️ 核心系統功能 (Core Function Menu)
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '20px' }}>
+                    <div className="nvr-main-btn" onClick={() => setActiveView('live_view')}>
+                      <span className="icon">📺</span>
+                      <span>實時監控</span>
+                    </div>
+                    <div className="nvr-main-btn" onClick={() => setActiveView('playback')}>
+                      <span className="icon">📂</span>
+                      <span>回放畫面</span>
+                    </div>
+                    <div className="nvr-main-btn" onClick={() => setActiveView('add_camera')}>
+                      <span className="icon">➕</span>
+                      <span>新增攝影機</span>
+                    </div>
+                    <div className="nvr-main-btn" onClick={() => setActiveView('search')}>
+                      <span className="icon">🔍</span>
+                      <span>事件日誌</span>
+                    </div>
                     
-                    {/* === Tab 1: Discord 嵌入富文本卡片 === */}
-                    {activeTab === 'discord' && (
-                      <div style={{ background: '#2f3136', borderRadius: '8px', padding: '10px', fontSize: '0.8em', color: '#dcddde', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#ff3366', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontSize: '0.6em', fontWeight: 'bold' }}>🔥</span>
-                          <strong style={{ fontSize: '0.85em', color: 'white' }}>AI Fire Sentinel (Bot)</strong>
-                        </div>
-                        
-                        {/* Discord Embed */}
-                        <div style={{ borderLeft: '4px solid #ff0055', background: '#202225', borderRadius: '4px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <strong style={{ fontSize: '0.9em', color: 'white' }}>🚨 工業 AI 火災與煙霧警報 (無人值守確認)</strong>
-                          <p style={{ fontSize: '0.8em', color: '#b9bbbe' }}>系統已連續 3 秒偵測到火焰/煙霧物理特徵，已自動斷開機台電源。</p>
+                    {/* 照片中重點紅色框線 focus 的 Settings 按鈕 */}
+                    <div className="nvr-main-btn focus-active" onClick={() => setActiveView('settings')}>
+                      <span className="icon">⚙️</span>
+                      <span style={{ color: 'var(--alarm-red)' }}>系統設定</span>
+                    </div>
+
+                    <div className="nvr-main-btn" onClick={() => setActiveView('information')}>
+                      <span className="icon">📊</span>
+                      <span>遙測與特徵</span>
+                    </div>
+                    <div className="nvr-main-btn" onClick={() => setActiveView('help')}>
+                      <span className="icon">❓</span>
+                      <span>操作說明</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 工廠快速資訊欄 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', width: '100%' }}>
+                  <div className="nvr-panel" style={{ padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>分勵脫扣器安全狀態</span>
+                      <strong style={{ color: systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
+                        {systemState.shunt_trip_triggered ? '⚡ 已切斷電源 (PROTECTED)' : '🔌 供電正常 (MONITORING)'}
+                      </strong>
+                    </div>
+                    <span className={`led-indicator ${systemState.shunt_trip_triggered ? 'led-red' : 'led-green'}`}></span>
+                  </div>
+
+                  <div className="nvr-panel" style={{ padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>累積負樣本 (用於微調)</span>
+                      <strong>{systemState.negative_samples_count} 張圖片</strong>
+                    </div>
+                    <span>📁</span>
+                  </div>
+
+                  <div className="nvr-panel" style={{ padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>GPU 推理負載 (自適應)</span>
+                      <strong style={{ color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : '#fff' }}>
+                        {latestTelemetry.temperature} °C ({systemState.throttling_fps} FPS)
+                      </strong>
+                    </div>
+                    <span>🌀</span>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= SPA 畫面 2: 實時監控 (Live View - 8至12路電視牆) ================= */}
+            {activeView === 'live_view' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+                
+                {/* 監控網格區域 */}
+                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', border: '2px solid var(--nvr-border)', borderRadius: '4px' }}>
+                  
+                  {/* 使用 React 狀態產生的電視牆網格 */}
+                  <div className={`camera-grid ${screenLayout}`}>
+                    
+                    {cameras.map((cam, index) => {
+                      // 判定這個網格在目前的 layout 下是否應當顯示
+                      // grid-1：僅顯示選中的那一路
+                      // grid-4：顯示前 4 路
+                      // grid-9：顯示前 9 路
+                      // grid-12：顯示全部 12 路
+                      const isSelected = selectedCameraId === cam.id;
+                      const layoutLimit = screenLayout === 'grid-1' ? 1 : screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+                      
+                      if (screenLayout === 'grid-1' && !isSelected) return null;
+                      if (screenLayout !== 'grid-1' && index >= layoutLimit) return null;
+
+                      // CH1 (Realtime) 火警時發出紅色閃爍
+                      const isCH1Alarm = cam.id === 'CAM_A_DIST_BOARD' && (systemState.confirmed_fire || systemState.suspected_fire);
+                      const isSystemFaultCell = cam.id === 'CAM_A_DIST_BOARD' && systemState.system_fault;
+
+                      return (
+                        <div 
+                          key={cam.id}
+                          onClick={() => {
+                            setSelectedCameraId(cam.id);
+                            // 若點擊選中的，則雙擊效果放大成單螢幕
+                            if (isSelected) {
+                              setScreenLayout(screenLayout === 'grid-1' ? 'grid-12' : 'grid-1');
+                            }
+                          }}
+                          className={`camera-cell ${isSelected ? 'selected' : ''} ${isCH1Alarm ? 'alarm-active' : ''} ${isSystemFaultCell ? 'fault-active' : ''}`}
+                        >
+                          <div className="camera-static"></div>
                           
-                          <div style={{ fontSize: '0.75em', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', color: '#b9bbbe' }}>
-                            <div>📷 位置: **A棟配電櫃**</div>
-                            <div>🔥 置信度: **{systemState.confirmed_fire ? '91%' : '0%'}**</div>
+                          {/* OSD 浮動標籤 */}
+                          <div className="camera-osd top-left">{cam.name}</div>
+                          <div className="camera-osd top-right">
+                            {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
+                            <span style={{ color: '#10b981' }}>● REC</span>
                           </div>
                           
-                          {/* 縮圖 */}
-                          {systemState.confirmed_fire && streamData?.image && (
-                            <img src={streamData.image} alt="Alarm Snapshot" style={{ width: '100%', borderRadius: '4px', marginTop: '5px' }} />
-                          )}
-                          <div style={{ fontSize: '0.7em', color: '#72767d', marginTop: '4px' }}>工業 NVR 安全防護層</div>
-                        </div>
-                      </div>
-                    )}
+                          {/* OSD 底部標籤：時間與物理引擎簡短狀態 */}
+                          <div className="camera-osd bottom-left">{nvrTime}</div>
+                          <div className="camera-osd bottom-right" style={{ fontSize: '10px' }}>
+                            {cam.id === 'CAM_A_DIST_BOARD' 
+                              ? (systemState.confirmed_fire ? '🔥 ALARM TRIGGERED' : systemState.suspected_fire ? '⚠️ DETECTING FIRE...' : '🟢 SAFE') 
+                              : '🟢 NORMAL'}
+                          </div>
 
-                    {/* === Tab 2: Email HTML 多媒體推送 === */}
-                    {activeTab === 'email' && (
-                      <div style={{ background: '#1c1d26', border: '1px solid #ff3366', borderRadius: '8px', padding: '10px', fontSize: '0.8em', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
-                          <span style={{ fontSize: '0.7em', color: '#888', display: 'block' }}>寄件人: fire-sentinel@factory.com</span>
-                          <strong style={{ fontSize: '0.85em', color: 'white' }}>🚨 【緊急警報】工業 AI 火災偵測系統！</strong>
+                          {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
+                          <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                            {cam.id === 'CAM_A_DIST_BOARD' ? (
+                              streamData?.image ? (
+                                <img
+                                  src={streamData.image}
+                                  alt="Realtime Cam Stream"
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                              ) : (
+                                <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center', fontSize: '12px' }}>
+                                  <span style={{ fontSize: '24px', display: 'block', animation: 'flash-slow 1s infinite alternate' }}>🎥</span>
+                                  正在讀取 A棟配電櫃 RTSP 串流...
+                                </div>
+                              )
+                            ) : (
+                              renderSimulatedChannel(cam.id)
+                            )}
+                          </div>
                         </div>
-                        <p style={{ fontSize: '0.75em', color: '#ddd' }}>系統在無人值守下，自動偵測到火警起火特徵，已自動執行分勵脫扣器切斷該區供電：</p>
-                        
-                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '4px', fontSize: '0.7em', color: '#ff9900' }}>
-                          <div>位置: A棟配電櫃-百葉窗通風口</div>
-                          <div>時間: 2026-05-30 10:25:31</div>
-                          <div>狀態: 🟢 已完成自動斷電保護</div>
-                        </div>
-                        {systemState.confirmed_fire && streamData?.image && (
-                          <img src={streamData.image} alt="Email Attachment" style={{ width: '100%', borderRadius: '3px' }} />
-                        )}
-                      </div>
-                    )}
+                      );
+                    })}
 
-                    {/* === Tab 3: Line & Telegram 訊息 === */}
-                    {activeTab === 'line_tg' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {/* Telegram */}
-                        <div style={{ background: '#182533', borderRadius: '8px', padding: '8px', fontSize: '0.8em', color: '#f5f5f5', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ color: '#4aa0eb', fontSize: '0.75em', fontWeight: 'bold' }}>Telegram Bot (AI Fire Sentinel)</span>
-                          <p style={{ fontSize: '0.85em', lineHeight: '1.2' }}>
-                            🚨 *工業 AI 火災警報*<br/>
-                            *位置*: A棟配電盤通風口<br/>
-                            *置信度*: **{systemState.confirmed_fire ? '91%' : '0%'}**<br/>
-                            🟢 已自動切斷機台電源保護！<br/>
-                            <span style={{ color: '#4aa0eb', textDecoration: 'underline' }}>[點擊打開實時監控]</span>
-                          </p>
-                        </div>
+                  </div>
 
-                        {/* Line */}
-                        <div style={{ background: '#252932', borderLeft: '4px solid #06c755', borderRadius: '4px', padding: '8px', fontSize: '0.8em', color: 'white', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ color: '#06c755', fontSize: '0.75em', fontWeight: 'bold' }}>LINE Notify (安全網)</span>
-                          <p style={{ fontSize: '0.8em', color: '#b9bbbe' }}>
-                            🚨【火災警報】<br/>
-                            位置: A棟配電櫃<br/>
-                            置信度: {systemState.confirmed_fire ? '91%' : '0%'}<br/>
-                            系統已自動切斷該區電源保護！
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                </div>
+
+                {/* 底部電視牆控制控制列 (與照片一致) */}
+                <div className="nvr-panel" style={{ padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setScreenLayout('grid-1')} className={`nvr-btn ${screenLayout === 'grid-1' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>1-Screen</button>
+                    <button onClick={() => setScreenLayout('grid-4')} className={`nvr-btn ${screenLayout === 'grid-4' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>4-Screen</button>
+                    <button onClick={() => setScreenLayout('grid-9')} className={`nvr-btn ${screenLayout === 'grid-9' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>9-Screen</button>
+                    <button onClick={() => setScreenLayout('grid-12')} className={`nvr-btn ${screenLayout === 'grid-12' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>12-Screen</button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>操作提示：雙擊或點擊選中畫面可放大至單螢幕</span>
+                    <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ fontSize: '12px', borderColor: 'var(--nvr-border-focus)' }}>
+                      返回主選單 🏠
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= SPA 畫面 3: 歷史回放 (Playback) ================= */}
+            {activeView === 'playback' && (
+              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '16px' }}>📂 歷史錄影與火警告警日誌回放 (Playback Control)</strong>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '20px', flex: 1 }}>
+                  {/* 通道選擇與日期 */}
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                      <label className="nvr-label">📅 選擇回放日期</label>
+                      <input type="date" defaultValue="2026-05-30" className="nvr-input" />
+                    </div>
                     
-                    {!systemState.confirmed_fire && (
-                      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#444', fontSize: '0.8em', textAlign: 'center', padding: '20px' }}>
-                        📭 手機收件匣目前為空。當火警倒數結束或人工確認時，將在此即時模擬黃金三元素推送效果。
+                    <div>
+                      <label className="nvr-label">🎥 選擇監控通道</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '250px', overflowY: 'auto' }}>
+                        {cameras.map(cam => (
+                          <button 
+                            key={cam.id} 
+                            onClick={() => setSelectedCameraId(cam.id)}
+                            className={`nvr-btn ${selectedCameraId === cam.id ? 'active' : ''}`}
+                            style={{ fontSize: '11px', justifyContent: 'flex-start', padding: '6px 10px' }}
+                          >
+                            {cam.name}
+                          </button>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  </div>
 
+                  {/* 回放畫面模擬與時間軸 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ flex: 1, background: '#000', border: '1px solid var(--nvr-border)', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', minHeight: '300px' }}>
+                      <div style={{ color: 'var(--nvr-text-muted)', textAlign: 'center' }}>
+                        <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>📼</span>
+                        <strong>正在載入 {cameras.find(c => c.id === selectedCameraId)?.name} 歷史錄影...</strong>
+                        <div style={{ fontSize: '11px', marginTop: '4px' }}>讀取 2026-05-30 H.265 本地備份日誌檔案</div>
+                      </div>
+                      <div style={{ position: 'absolute', top: '15px', left: '15px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '3px', fontSize: '11px' }}>
+                        ▶ PLAYBACK MODE (2.0x SPEED)
+                      </div>
+                    </div>
+
+                    {/* NVR 24小時時間軸滑塊 */}
+                    <div className="nvr-panel" style={{ padding: '15px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--nvr-text-muted)', marginBottom: '5px' }}>
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>24:00</span>
+                      </div>
+                      <input type="range" min="0" max="1440" defaultValue="625" style={{ width: '100%', accentColor: 'var(--nvr-border-focus)' }} />
+                      <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', fontWeight: 'bold' }}>
+                        當前播放時間戳：10:25:31 (模擬火警前夕錄影)
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* 歷史告警日誌與負樣本累積 (與自動循環清理連動) */}
-            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.95em', color: 'var(--text-secondary)' }}>📁 本地微調負樣本 & 告警歷史日誌</strong>
-                <span className="glass-panel" style={{ fontSize: '0.75em', padding: '2px 6px', background: 'rgba(0,255,102,0.1)', color: 'var(--normal-green)', borderColor: 'rgba(0,255,102,0.2)' }}>
-                  已存負樣本: {systemState.negative_samples_count} 張
-                </span>
+            {/* ================= SPA 畫面 4: 新增攝影機 (Add Camera) ================= */}
+            {activeView === 'add_camera' && (
+              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '16px' }}>➕ 新增與管理工廠攝影機通道 (Camera Provisioning)</strong>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); alert("工廠安全提示：您目前處於唯讀模擬環境下，新增攝影機配置已成功儲存至前端記憶體快取。"); }} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label className="nvr-label">攝影機通道 (CH)</label>
+                      <select className="nvr-input">
+                        <option>CH13 (自動分配)</option>
+                        <option>CH14</option>
+                        <option>CH15</option>
+                        <option>CH16</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="nvr-label">攝影機自訂名稱</label>
+                      <input type="text" placeholder="例如：I棟成品倉庫西北角" className="nvr-input" required />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="nvr-label">RTSP 視訊串流網址 (RTSP Stream Link)</label>
+                    <input type="text" placeholder="rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream" className="nvr-input" required />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label className="nvr-label">部署工廠區域</label>
+                      <input type="text" placeholder="例如：成品包裝區" className="nvr-input" />
+                    </div>
+
+                    <div>
+                      <label className="nvr-label">視訊編碼格式</label>
+                      <select className="nvr-input">
+                        <option>H.265 (智慧壓縮 - 推薦)</option>
+                        <option>H.264</option>
+                        <option>MJPEG</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
+                    <label className="nvr-label" style={{ color: '#fff', fontSize: '13px' }}>🧠 啟用 AI 二階段特徵分析功能</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="checkbox" defaultChecked /> 火焰 YOLO 核心檢測
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="checkbox" defaultChecked /> 煙霧背景模糊檢測
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="checkbox" /> 人車入侵辨識
+                      </label>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="nvr-btn" style={{ padding: '12px', border: '1px solid var(--nvr-border-focus)', fontSize: '13px', fontWeight: 'bold' }}>
+                    💾 儲存並啟用此相機通道
+                  </button>
+                </form>
               </div>
-              
-              <p style={{ fontSize: '0.75em', color: '#666', marginBottom: '5px' }}>
-                *排除誤報時，系統會自動儲存該影格至 `negative_samples/` 作為本地二次微調素材，提升精準度至 100%。
-              </p>
+            )}
 
-              {/* 日誌清單 */}
-              <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {systemState.alarm_logs.length > 0 ? (
-                  systemState.alarm_logs.map(log => (
-                    <div key={log.id} className="glass-panel" style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', fontSize: '0.8em' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {log.snapshot && (
-                          <img src={`http://127.0.0.1:8000${log.snapshot}`} alt="Log Thumb" style={{ width: '40px', height: '25px', objectFit: 'cover', borderRadius: '2px', border: '1px solid rgba(255,0,85,0.3)' }} />
-                        )}
-                        <div>
-                          <strong style={{ color: 'var(--warning-red)', display: 'block' }}>🚨 AI 自動火警通報</strong>
-                          <span style={{ fontSize: '0.85em', color: '#555' }}>{log.timestamp}</span>
+            {/* ================= SPA 畫面 5: 搜尋與日誌 (Search) ================= */}
+            {activeView === 'search' && (
+              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '16px' }}>🔍 歷史告警日誌與微調負樣本搜尋 (Event Logs Search)</strong>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                </div>
+
+                {/* 搜尋過濾條件 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 120px', gap: '15px', alignItems: 'flex-end' }}>
+                  <div>
+                    <label className="nvr-label">事件分類</label>
+                    <select className="nvr-input">
+                      <option>所有事件 (火警與故障)</option>
+                      <option>🚨 AI 自動火警通報</option>
+                      <option>⚡ 分勵脫扣器切斷電源</option>
+                      <option>⚠️ 系統故障/心跳中斷</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="nvr-label">查詢起訖時間</label>
+                    <input type="date" className="nvr-input" defaultValue="2026-05-30" />
+                  </div>
+                  <div>
+                    <label className="nvr-label">部署通道區域</label>
+                    <input type="text" placeholder="輸入關鍵字如：A棟" className="nvr-input" />
+                  </div>
+                  <button onClick={() => alert("過濾日誌成功！")} className="nvr-btn" style={{ width: '100%', height: '38px' }}>
+                    搜尋 🔍
+                  </button>
+                </div>
+
+                {/* 日誌結果表格 (與原本的日誌完美同步) */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--nvr-border)', color: 'var(--nvr-text-muted)' }}>
+                        <th style={{ padding: '10px' }}>編號</th>
+                        <th>事件時間</th>
+                        <th>事件類型</th>
+                        <th>部署通道</th>
+                        <th>特徵信賴度</th>
+                        <th>分勵脫扣斷電</th>
+                        <th>告警截圖備份</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {systemState.alarm_logs.length > 0 ? (
+                        systemState.alarm_logs.map((log, idx) => (
+                          <tr key={log.id} style={{ borderBottom: '1px solid var(--nvr-border)' }}>
+                            <td style={{ padding: '10px' }}>#{log.id}</td>
+                            <td>{log.timestamp}</td>
+                            <td style={{ color: 'var(--alarm-red)', fontWeight: 'bold' }}>🚨 AI 自動火警通報</td>
+                            <td>{log.camera_id}</td>
+                            <td>{(log.confidence * 100).toFixed(1)}%</td>
+                            <td style={{ color: 'var(--alarm-red)' }}>{log.shunt_trip ? '⚡ 已斷開 (DISCONNECTED)' : '🔌 未聯動'}</td>
+                            <td>
+                              {log.snapshot && (
+                                <a 
+                                  href={`http://127.0.0.1:8000${log.snapshot}`} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  style={{ color: 'var(--info-blue)', textDecoration: 'underline' }}
+                                >
+                                  查看 JPG 影像
+                                </a>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: 'var(--nvr-text-muted)' }}>
+                            🗄️ 目前無告警歷史事件記錄 (後端檔案空間設有 30MB 循環清理限制)
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= SPA 畫面 6: 遙測與物理特徵資訊 (Information) ================= */}
+            {activeView === 'information' && (
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
+                
+                {/* 左側：GPU 遙測與自適應降載保護 */}
+                <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <strong style={{ fontSize: '15px' }}>🌀 GPU 顯示卡狀態與自適應降載保護</strong>
+                    <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '2px 8px', fontSize: '11px' }}>主選單 🏠</button>
+                  </div>
+
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--nvr-text-muted)' }}>顯示卡核心遙測：</span>
+                      <button 
+                        onClick={handleToggleOverheat}
+                        className="nvr-btn"
+                        style={{ fontSize: '11px', padding: '3px 8px', backgroundColor: overheatMode ? 'rgba(255, 51, 102, 0.2)' : 'rgba(255,255,255,0.05)', borderColor: overheatMode ? 'var(--alarm-red)' : 'var(--nvr-border)' }}
+                      >
+                        {overheatMode ? '🔥 關閉核心過熱模擬' : '⚡ 模擬顯示卡過熱降載'}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '10px' }}>
+                      <div className="nvr-panel" style={{ padding: '12px', background: '#090a0c', textAlign: 'center' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>顯示卡核心溫度</span>
+                        <strong style={{ fontSize: '24px', color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : latestTelemetry.status === 'WARNING' ? 'var(--alarm-yellow)' : '#fff' }}>
+                          {latestTelemetry.temperature} °C
+                        </strong>
+                      </div>
+                      <div className="nvr-panel" style={{ padding: '12px', background: '#090a0c', textAlign: 'center' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', display: 'block' }}>核心風扇轉速</span>
+                        <strong style={{ fontSize: '24px' }}>{latestTelemetry.fan_speed} %</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                      <div>顯示晶片使用率: <strong>{latestTelemetry.gpu_utilization}%</strong></div>
+                      <div>顯示記憶體佔用: <strong>{latestTelemetry.memory_percent}%</strong></div>
+                      <div>自適應降載狀態: <strong style={{ color: latestTelemetry.status === 'CRITICAL' ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
+                        {latestTelemetry.status === 'CRITICAL' ? '🚨 降載運作中 (5 FPS 保護核心過熱)' : '🟢 運作正常 (15 FPS 滿載分析)'}
+                      </strong></div>
+                    </div>
+                  </div>
+
+                  {/* 實體保護連動控制 */}
+                  <div className="nvr-panel" style={{ padding: '15px' }}>
+                    <strong style={{ fontSize: '12px', color: 'var(--nvr-text-muted)', display: 'block', marginBottom: '8px' }}>⚡ 斷路器分勵脫扣器安全狀態</strong>
+                    <div style={{ padding: '12px', borderRadius: '4px', backgroundColor: systemState.shunt_trip_triggered ? 'rgba(255, 51, 102, 0.08)' : 'rgba(16, 185, 129, 0.05)', border: `1px solid ${systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'rgba(16, 185, 129, 0.2)'}` }}>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: systemState.shunt_trip_triggered ? 'var(--alarm-red)' : 'var(--normal-green)' }}>
+                        {systemState.shunt_trip_triggered ? '⚡ 脫扣器已斷電釋放 (PROTECTED)' : '🔌 繼電器通電監控中 (MONITORING)'}
+                      </div>
+                      <p style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', marginTop: '4px' }}>
+                        分勵脫扣器 (Shunt Trip) 與 A棟高壓配電櫃完成實體電路串接。當 AI 確認火警時，毫秒級自動切斷供電。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 右側：雙重物理特徵分析引擎遙測 */}
+                <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px' }}>
+                    <strong style={{ fontSize: '15px' }}>🧠 二階段物理特徵驗證引擎實時遙測 (CH1)</strong>
+                  </div>
+
+                  <p style={{ fontSize: '12px', color: 'var(--nvr-text-muted)' }}>
+                    系統提取火災火焰的色彩頻率分佈 (YCbCr / HSI 比率) 及煙霧蔓延的邊界模糊高頻特徵，避免傳統純 YOLO 的物件辨識誤報。
+                  </p>
+
+                  {/* 火焰色彩與閃爍頻率 */}
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
+                    <strong style={{ fontSize: '12px', color: 'var(--alarm-red)', display: 'block', marginBottom: '8px' }}>🔥 火焰物理特徵提取 (Flame Color & Flicker Freq)</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                          <span>色彩佔用率 (HSI)</span>
+                          <strong>{(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0).toFixed(1)}%</strong>
+                        </div>
+                        <div style={{ height: '5px', background: '#000', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', background: 'var(--alarm-red)', width: `${(activeDetections.find(d => d.type === 'flame')?.stats?.color_ratio * 100 || 0)}%` }}></div>
                         </div>
                       </div>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.9em' }}>
-                        機台電源: <strong style={{ color: 'var(--warning-red)' }}>已切斷</strong>
-                      </span>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                          <span>閃爍主頻率 (flicker)</span>
+                          <strong>{(activeDetections.find(d => d.type === 'flame')?.stats?.flicker_freq || 0).toFixed(1)} Hz</strong>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>
+                          安全區間: 5Hz ~ 10Hz 判定為真實明火
+                        </div>
+                      </div>
                     </div>
-                  ))
-                ) : (
-                  <div style={{ color: '#444', textAlign: 'center', padding: '15px', fontSize: '0.8em' }}>
-                    🗄️ 暫無歷史告警日誌 (告警影片設有 30MB 循環清理限制)
                   </div>
-                )}
+
+                  {/* 煙霧膨脹與高頻清晰度損失 */}
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
+                    <strong style={{ fontSize: '12px', color: 'var(--info-blue)', display: 'block', marginBottom: '8px' }}>☁️ 煙霧背景模糊度分析 (Laplacian High Freq Blurring)</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                          <span>背景高頻清晰度損失</span>
+                          <strong>{(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0).toFixed(0)}%</strong>
+                        </div>
+                        <div style={{ height: '5px', background: '#000', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', background: 'var(--info-blue)', width: `${(activeDetections.find(d => d.type === 'smoke')?.stats?.clarity_loss * 100 || 0)}%` }}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                          <span>時空漂移向上斜率</span>
+                          <strong>{(activeDetections.find(d => d.type === 'smoke')?.stats?.y_trend || 0.0).toFixed(2)}</strong>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>
+                          煙霧向上漂移趨勢物理分析
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
+            )}
 
-          </section>
+            {/* ================= SPA 畫面 7: 系統設定 (Settings) ================= */}
+            {activeView === 'settings' && (
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+                
+                {/* 左側：AI 演算法與硬體防禦連動參數 */}
+                <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <strong style={{ fontSize: '16px' }}>⚙️ AI 檢測與硬體防禦連動設定 (NVR & Shunt Trip Link)</strong>
+                    <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                  </div>
 
-        </main>
-        
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                      <label className="nvr-label">🚨 無人值守自動判定起火倒數時間</label>
+                      <select className="nvr-input">
+                        <option>10 秒 (黃金搶救時間 - POC預設)</option>
+                        <option>30 秒</option>
+                        <option>60 秒</option>
+                        <option>120 秒</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div>
+                        <label className="nvr-label">YOLO 明火置信度門檻 (Confidence)</label>
+                        <input type="number" step="0.05" defaultValue="0.45" className="nvr-input" />
+                      </div>
+                      <div>
+                        <label className="nvr-label">火焰閃爍頻率閾值 (Flicker Limit)</label>
+                        <input type="number" step="0.5" defaultValue="5.0" className="nvr-input" />
+                      </div>
+                    </div>
+
+                    <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        <input type="checkbox" defaultChecked /> 啟用分勵脫扣器 (Shunt Trip) 自動切斷電源防護
+                      </label>
+                      <p style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', marginTop: '5px', paddingLeft: '22px' }}>
+                        ※ 安全聲明：啟用後，若無人值守倒數歸零，NVR 將直接對繼電器輸出訊號，強制切斷配電櫃總閘，防範火勢蔓延。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 右側：行動端多軌推送模擬器 (整合原本的手機殼與通報) */}
+                <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '400px' }}>
+                  <strong style={{ fontSize: '14px', borderBottom: '1px solid var(--nvr-border)', paddingBottom: '5px' }}>
+                    📱 行動回報多媒體推送展示模擬器 (黃金三元素)
+                  </strong>
+
+                  {/* 切換通知類型按鈕 */}
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    {['discord', 'email', 'line_tg'].map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveMobileTab(tab)}
+                        className={`nvr-btn ${activeMobileTab === tab ? 'active' : ''}`}
+                        style={{ fontSize: '11px', padding: '4px 10px', flex: 1 }}
+                      >
+                        {tab === 'discord' ? 'Discord Webhook' : tab === 'email' ? 'Email HTML' : 'Line / Telegram'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 手機外殼 */}
+                  <div style={{ flex: 1, background: '#1c1e24', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px', borderRadius: '4px', border: '1px solid var(--nvr-border)' }}>
+                    <div style={{ 
+                      width: '270px', 
+                      height: '350px', 
+                      borderRadius: '20px', 
+                      border: '6px solid #2d3142', 
+                      background: '#090a0f', 
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.6)', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}>
+                      {/* 劉海 */}
+                      <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '90px', height: '14px', background: '#2d3142', borderRadius: '0 0 8px 8px', zIndex: 10 }}></div>
+                      
+                      {/* 手機內容區 */}
+                      <div style={{ flex: 1, padding: '12px 10px 10px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#fff', marginTop: '10px' }}>
+                        
+                        {/* Discord Webhook */}
+                        {activeMobileTab === 'discord' && (
+                          <div style={{ background: '#2f3136', borderRadius: '6px', padding: '8px', color: '#dcddde' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
+                              <span>🤖</span>
+                              <strong>AI Fire Sentinel (Bot)</strong>
+                            </div>
+                            <div style={{ borderLeft: '3px solid #ff3366', background: '#202225', padding: '6px', borderRadius: '2px' }}>
+                              <strong style={{ fontSize: '11px', color: '#fff' }}>🚨 工業 AI 火警與煙霧通報</strong>
+                              <p style={{ fontSize: '10px', color: '#b9bbbe', marginTop: '3px' }}>
+                                A棟配電櫃百葉窗偵測到火焰物理特徵！
+                              </p>
+                              {systemState.confirmed_fire && streamData?.image && (
+                                <img src={streamData.image} alt="Discord Snapshot" style={{ width: '100%', borderRadius: '2px', marginTop: '5px' }} />
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Email HTML */}
+                        {activeMobileTab === 'email' && (
+                          <div style={{ background: '#1c1d26', border: '1px solid #ff3366', borderRadius: '6px', padding: '8px' }}>
+                            <div style={{ borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px', fontSize: '10px', color: 'var(--nvr-text-muted)' }}>
+                              寄件人: secure-sentinel@factory.com
+                            </div>
+                            <strong style={{ color: '#fff', fontSize: '10px', display: 'block' }}>🚨 【緊急警報】工業 AI 火災防範！</strong>
+                            <p style={{ fontSize: '9px', color: '#ccc', marginTop: '4px' }}>
+                              配電櫃已自動觸發分勵脫扣器切斷電源供電。
+                            </p>
+                            {systemState.confirmed_fire && streamData?.image && (
+                              <img src={streamData.image} alt="Email Attachment" style={{ width: '100%', borderRadius: '2px', marginTop: '4px' }} />
+                            )}
+                          </div>
+                        )}
+
+                        {/* Line / TG */}
+                        {activeMobileTab === 'line_tg' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ background: '#182533', borderRadius: '6px', padding: '6px' }}>
+                              <span style={{ color: '#4aa0eb', fontSize: '10px', fontWeight: 'bold' }}>Telegram Security Channel</span>
+                              <p style={{ fontSize: '10px', marginTop: '2px' }}>
+                                🚨 *火災緊急警報*<br/>
+                                位置: A棟配電櫃<br/>
+                                狀態: 🔌 已自動斷電保護！
+                              </p>
+                            </div>
+                            <div style={{ background: '#252932', borderLeft: '3px solid #06c755', borderRadius: '4px', padding: '6px' }}>
+                              <span style={{ color: '#06c755', fontSize: '10px', fontWeight: 'bold' }}>LINE Notify</span>
+                              <p style={{ fontSize: '10px', marginTop: '2px' }}>
+                                🚨【火災警報】A棟配電櫃已執行安全防範斷電！
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {!systemState.confirmed_fire && (
+                          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--nvr-text-muted)', fontSize: '10px', textAlign: 'center', padding: '10px' }}>
+                            📭 收件匣暫無新警報。當 AI 判定為真实火警時，在此即時顯示黃金三元素通知。
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= SPA 畫面 8: 操作說明 (Help) ================= */}
+            {activeView === 'help' && (
+              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '16px' }}>❓ 工廠消防 SOP 操作指引與 AI 排除誤報說明 (Operation Guide)</strong>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '13px', lineHeight: '1.6' }}>
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(255, 51, 102, 0.05)', borderColor: 'rgba(255, 51, 102, 0.2)' }}>
+                    <strong style={{ color: 'var(--alarm-red)', display: 'block', marginBottom: '5px' }}>🚨 工廠火警緊急應變流程 (SOP)</strong>
+                    <ol style={{ paddingLeft: '20px' }}>
+                      <li>當系統判定為火災並切斷配電櫃供電後，值班操作員應立即攜帶防毒面具前往 A棟配電櫃 進行現場確認。</li>
+                      <li>確認起火後，立即撥打 119 通報消防局，並通知廠長及機房安全負責人。</li>
+                      <li>利用乾粉滅火器或二氧化碳滅火器進行初期滅火，切忌用水撲滅電氣火災。</li>
+                    </ol>
+                  </div>
+
+                  <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                    <strong style={{ color: 'var(--normal-green)', display: 'block', marginBottom: '5px' }}>🧠 AI 二次微調與排除誤報機制</strong>
+                    <ul style={{ paddingLeft: '20px' }}>
+                      <li>**排除誤報**：若操作員確認為誤報（例如電焊火花或紅外線反光），請點選「排除此誤報」按鈕。</li>
+                      <li>**負樣本自動收集**：系統將自動擷取該影格，儲存至伺服器的 `backend/data/negative_samples` 目錄中。</li>
+                      <li>**二次微調策略**：收集足夠誤報樣本後，可手動執行後端微調指令，讓 AI 完美排除此工廠區域的誤報，精準度朝 100% 遞進。</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </main>
+        </div>
+
         {/* Footer */}
-        <footer style={{ textAlign: 'center', color: '#555', fontSize: '0.8em', borderTop: '1px solid var(--border-glass)', paddingTop: '15px', marginTop: '10px' }}>
-          工業級 NVR AI 火警與煙霧雙重物理分析防禦監控系統 | POC 可行性驗證展示版 (Windows 原生部署)
+        <footer style={{ height: '30px', backgroundColor: '#0b0c0e', borderTop: '2px solid var(--nvr-border)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px', color: 'var(--nvr-text-muted)' }}>
+          工業級 NVR AI 智慧火警與煙霧雙重特徵驗證防禦系統 | 台灣工廠專用電視牆版 V2.0
         </footer>
       </div>
     </>

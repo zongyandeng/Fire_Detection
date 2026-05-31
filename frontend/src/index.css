@@ -1,20 +1,23 @@
 :root {
-  --bg-primary: #0a0b0e;
-  --bg-secondary: #13151b;
-  --bg-tertiary: #1b1e26;
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
+  /* 工業級 NVR / DVR 經典配色偏好 - 去霓虹與裝飾性漸層 */
+  --nvr-bg: #0d0e10;            /* 極深黑色底，符合工廠監視器電視牆 */
+  --nvr-panel: #16181d;         /* 深灰色面板底 */
+  --nvr-panel-light: #20232a;   /* 較亮灰色面板，用於分區 */
+  --nvr-border: #2c3039;        /* 實體、扎實的灰色邊框 */
+  --nvr-border-focus: #ff3366;  /* 選中時的紅色邊框 (對應照片中 Settings 的紅框) */
+  --nvr-btn-bg: #22252e;        /* 按鈕預設深灰底 */
+  --nvr-btn-hover: #313643;     /* 按鈕懸停底 */
+  --nvr-text: #e2e8f0;          /* 主要文字 (冷白) */
+  --nvr-text-muted: #8a94a6;    /* 次要文字 (暗灰) */
   
-  /* 工業科技配色 */
-  --neon-orange: #ff5a00;
-  --neon-blue: #00f0ff;
-  --warning-red: #ff0055;
-  --normal-green: #00ff66;
-  --system-fault-yellow: #ffb700;
+  /* 功能性狀態顏色 (扎實實用，非科幻霓虹) */
+  --alarm-red: #ff3366;         /* 警報紅色 */
+  --alarm-yellow: #f59e0b;      /* 故障黃色 */
+  --normal-green: #10b981;      /* 運作正常綠色 */
+  --info-blue: #3b82f6;         /* 資訊藍色 */
   
-  --border-glass: rgba(255, 255, 255, 0.05);
-  --bg-glass: rgba(19, 21, 27, 0.7);
-  --blur-radius: 12px;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
 }
 
 * {
@@ -24,18 +27,15 @@
 }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  overflow-x: hidden;
+  background-color: var(--nvr-bg);
+  color: var(--nvr-text);
+  font-family: var(--font-family);
+  overflow: hidden; /* NVR 系統通常是滿版全螢幕，不滾動 */
   font-size: 14px;
-  background-image: 
-    radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(255, 90, 0, 0.03) 0%, transparent 40%);
-  background-attachment: fixed;
+  user-select: none;
 }
 
-/* 工業網格背景紋理 */
+/* NVR 電視牆無裝飾網格 (僅在需要時微弱呈現) */
 .industrial-grid {
   position: fixed;
   top: 0;
@@ -43,59 +43,236 @@ body {
   width: 100vw;
   height: 100vh;
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px);
-  background-size: 30px 30px;
+    linear-gradient(rgba(255, 255, 255, 0.003) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.003) 1px, transparent 1px);
+  background-size: 40px 40px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* 玻璃擬態面板 */
-.glass-panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(var(--blur-radius));
-  -webkit-backdrop-filter: blur(var(--blur-radius));
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* 經典 NVR 灰色扎實控制面板 */
+.nvr-panel {
+  background-color: var(--nvr-panel);
+  border: 1px solid var(--nvr-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
 }
 
-.glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+/* NVR 按鈕 - 方正扁平、帶有硬朗邊界 */
+.nvr-btn {
+  background-color: var(--nvr-btn-bg);
+  border: 1px solid var(--nvr-border);
+  color: var(--nvr-text);
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
 }
 
-/* 警報紅色脈衝邊框 */
-.glass-panel.suspected-active {
-  border-color: rgba(255, 0, 85, 0.4);
-  box-shadow: 0 0 20px 2px rgba(255, 0, 85, 0.25);
-  animation: pulse-border-red 1.5s infinite alternate;
+.nvr-btn:hover {
+  background-color: var(--nvr-btn-hover);
+  border-color: #4a5160;
 }
 
-.glass-panel.confirmed-active {
-  border-color: var(--warning-red);
-  box-shadow: 0 0 30px 5px rgba(255, 0, 85, 0.4);
-  animation: pulse-border-heavy-red 1s infinite alternate;
+.nvr-btn:active {
+  background-color: var(--nvr-panel);
+  transform: translateY(1px);
 }
 
-.glass-panel.fault-active {
-  border-color: rgba(255, 183, 0, 0.4);
-  box-shadow: 0 0 20px 2px rgba(255, 183, 0, 0.2);
-  animation: pulse-border-yellow 1.5s infinite alternate;
+.nvr-btn.active {
+  background-color: var(--nvr-panel-light);
+  border-color: var(--nvr-border-focus);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
 }
 
-/* 全螢幕緊急警報背景波紋 */
+/* 照片中大圖標功能鍵樣式 (如 Settings, Playback) */
+.nvr-main-btn {
+  background-color: var(--nvr-btn-bg);
+  border: 2px solid var(--nvr-border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--nvr-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 120px;
+  height: 120px;
+}
+
+.nvr-main-btn:hover {
+  background-color: var(--nvr-btn-hover);
+  border-color: #4a5160;
+  transform: scale(1.03);
+}
+
+.nvr-main-btn.focus-active {
+  border-color: var(--nvr-border-focus); /* 照片上的紅框效果 */
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+}
+
+.nvr-main-btn .icon {
+  font-size: 32px;
+}
+
+.nvr-main-btn span {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* NVR 頂部導覽列 */
+.nvr-header {
+  height: 50px;
+  background-color: #0b0c0e;
+  border-bottom: 2px solid var(--nvr-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 10;
+}
+
+.nvr-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nvr-logo-text {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+/* 攝影機畫面電視牆布局 (1路, 4路, 9路, 12路) */
+.camera-grid {
+  display: grid;
+  gap: 4px;
+  background-color: #000;
+  padding: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.camera-grid.grid-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.camera-grid.grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.camera-grid.grid-9 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.camera-grid.grid-12 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.camera-grid.grid-16 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+}
+
+/* 單個攝影機畫面格子 */
+.camera-cell {
+  background-color: #121316;
+  border: 1px solid #1f232b;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.camera-cell:hover {
+  border-color: #4a5160;
+  z-index: 1;
+}
+
+.camera-cell.selected {
+  border-color: var(--nvr-border-focus);
+  box-shadow: inset 0 0 10px rgba(255, 51, 102, 0.5);
+  z-index: 2;
+}
+
+/* 監視畫面浮動 OSd 資訊 */
+.camera-osd {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #ffffff;
+  text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.camera-osd.top-left {
+  top: 8px;
+  left: 10px;
+}
+
+.camera-osd.top-right {
+  top: 8px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-osd.bottom-left {
+  bottom: 8px;
+  left: 10px;
+}
+
+.camera-osd.bottom-right {
+  bottom: 8px;
+  right: 10px;
+}
+
+/* 監視器斷訊 / 模擬動態畫面效果 */
+.camera-static {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.05;
+  background-image: radial-gradient(circle, #fff 10%, transparent 11%), radial-gradient(circle, #fff 10%, transparent 11%);
+  background-size: 6px 6px;
+  background-position: 0 0, 3px 3px;
+  pointer-events: none;
+}
+
+/* 全螢幕紅色閃爍（用於實體火警警報） */
 .alarm-overlay-red {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  box-shadow: inset 0 0 100px rgba(255, 0, 85, 0.4);
+  box-shadow: inset 0 0 80px rgba(255, 0, 85, 0.4);
+  border: 10px solid var(--alarm-red);
   pointer-events: none;
   z-index: 9999;
-  animation: pulse-bg-red 1s infinite alternate;
+  animation: pulse-bg-red 0.8s infinite alternate;
 }
 
 .alarm-overlay-yellow {
@@ -104,149 +281,119 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  box-shadow: inset 0 0 80px rgba(255, 183, 0, 0.25);
+  box-shadow: inset 0 0 60px rgba(245, 158, 11, 0.2);
+  border: 10px solid var(--alarm-yellow);
   pointer-events: none;
   z-index: 9999;
-  animation: pulse-bg-yellow 1.5s infinite alternate;
-}
-
-/* 呼吸燈動畫 */
-@keyframes pulse-border-red {
-  0% { border-color: rgba(255, 0, 85, 0.2); }
-  100% { border-color: rgba(255, 0, 85, 0.6); }
-}
-
-@keyframes pulse-border-heavy-red {
-  0% { border-color: rgba(255, 0, 85, 0.5); }
-  100% { border-color: rgba(255, 0, 85, 1.0); }
-}
-
-@keyframes pulse-border-yellow {
-  0% { border-color: rgba(255, 183, 0, 0.2); }
-  100% { border-color: rgba(255, 183, 0, 0.6); }
+  animation: pulse-bg-yellow 1.2s infinite alternate;
 }
 
 @keyframes pulse-bg-red {
-  0% { box-shadow: inset 0 0 50px rgba(255, 0, 85, 0.2); }
-  100% { box-shadow: inset 0 0 150px rgba(255, 0, 85, 0.55); }
+  0% { opacity: 0.3; }
+  100% { opacity: 1.0; }
 }
 
 @keyframes pulse-bg-yellow {
-  0% { box-shadow: inset 0 0 40px rgba(255, 183, 0, 0.15); }
-  100% { box-shadow: inset 0 0 100px rgba(255, 183, 0, 0.35); }
+  0% { opacity: 0.4; }
+  100% { opacity: 1.0; }
 }
 
-/* LED 脈衝呼吸燈 */
+/* LED 燈 */
 .led-indicator {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
-  box-shadow: 0 0 8px currentColor;
-}
-
-.led-blue {
-  color: var(--neon-blue);
-  background-color: var(--neon-blue);
-  animation: led-pulse 1.2s infinite alternate;
+  box-shadow: 0 0 6px currentColor;
 }
 
 .led-green {
   color: var(--normal-green);
   background-color: var(--normal-green);
-  animation: led-pulse 1.2s infinite alternate;
 }
 
 .led-red {
-  color: var(--warning-red);
-  background-color: var(--warning-red);
-  animation: led-pulse 0.6s infinite alternate;
+  color: var(--alarm-red);
+  background-color: var(--alarm-red);
+  animation: flash-fast 0.5s infinite alternate;
 }
 
 .led-yellow {
-  color: var(--system-fault-yellow);
-  background-color: var(--system-fault-yellow);
-  animation: led-pulse 1.2s infinite alternate;
+  color: var(--alarm-yellow);
+  background-color: var(--alarm-yellow);
+  animation: flash-slow 1s infinite alternate;
 }
 
-@keyframes led-pulse {
-  0% { opacity: 0.4; transform: scale(0.9); box-shadow: 0 0 4px currentColor; }
-  100% { opacity: 1.0; transform: scale(1.15); box-shadow: 0 0 12px currentColor; }
+@keyframes flash-fast {
+  0% { opacity: 0.3; }
+  100% { opacity: 1.0; }
 }
 
-/* 心跳網波形動畫 */
-.heartbeat-line {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: dash 4s linear infinite;
+@keyframes flash-slow {
+  0% { opacity: 0.4; }
+  100% { opacity: 1.0; }
 }
 
-@keyframes dash {
-  to {
-    stroke-dashoffset: 0;
-  }
+/* 表單元件 - 沉穩灰色 */
+.nvr-input {
+  background-color: var(--nvr-bg);
+  border: 1px solid var(--nvr-border);
+  color: var(--nvr-text);
+  border-radius: 4px;
+  padding: 8px 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
 }
 
-/* 按鈕與互動微動畫 */
-.btn-primary {
-  background: linear-gradient(135deg, var(--neon-orange) 0%, #d43f00 100%);
-  color: white;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(255, 90, 0, 0.3);
+.nvr-input:focus {
+  border-color: var(--nvr-border-focus);
 }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(255, 90, 0, 0.45);
+.nvr-label {
+  font-size: 12px;
+  color: var(--nvr-text-muted);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
 }
 
-.btn-danger {
-  background: linear-gradient(135deg, var(--warning-red) 0%, #cc003c 100%);
-  color: white;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(255, 0, 85, 0.3);
+/* 電視牆邊界高亮 */
+.camera-cell.alarm-active {
+  border-color: var(--alarm-red) !important;
+  animation: cell-flash-red 0.8s infinite alternate;
 }
 
-.btn-danger:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(255, 0, 85, 0.45);
+.camera-cell.fault-active {
+  border-color: var(--alarm-yellow) !important;
+  animation: cell-flash-yellow 1.2s infinite alternate;
 }
 
-.btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-glass);
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
+@keyframes cell-flash-red {
+  0% { box-shadow: inset 0 0 5px rgba(255, 0, 85, 0.2); }
+  100% { box-shadow: inset 0 0 20px rgba(255, 0, 85, 0.7); }
 }
 
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+@keyframes cell-flash-yellow {
+  0% { box-shadow: inset 0 0 5px rgba(245, 158, 11, 0.15); }
+  100% { box-shadow: inset 0 0 15px rgba(245, 158, 11, 0.45); }
 }
 
-/* 網頁滾動條美化 */
+/* monaco/console 捲動條 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--nvr-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: var(--nvr-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: var(--nvr-text-muted);
 }
