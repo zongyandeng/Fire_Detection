@@ -769,8 +769,15 @@ function App() {
                     {/* 插槽選取器 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontWeight: 'bold' }}>1. 點選指定視窗 (Slot)</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                        {activeSlots.slice(0, screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12).map((cameraId, idx) => {
+                      <div style={{ display: 'grid', gridTemplateColumns: screenLayout === 'grid-1' ? '1fr' : '1fr 1fr', gap: '6px' }}>
+                        {activeSlots.map((cameraId, idx) => {
+                          const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+                          if (screenLayout === 'grid-1' && idx !== selectedSlotIndex) {
+                            return null;
+                          }
+                          if (screenLayout !== 'grid-1' && idx >= limit) {
+                            return null;
+                          }
                           const isSel = selectedSlotIndex === idx;
                           const camName = cameras.find(c => c.id === cameraId)?.name.split(' - ')[0] || `CH${idx+1}`;
                           return (
@@ -785,11 +792,11 @@ function App() {
                               className={`nvr-btn ${isSel ? 'active' : ''}`}
                               style={{ fontSize: '11px', padding: '5px', height: '32px' }}
                             >
-                                {isSel ? '🎯' : '🔲'} 視窗 {idx + 1} ({camName})
-                              </button>
-                            );
-                          })}
-                        </div>
+                              {isSel ? '🎯' : '🔲'} 視窗 {idx + 1} ({camName})
+                            </button>
+                          );
+                        })}
+                      </div>
                       </div>
 
                       <div style={{ borderBottom: '1px dashed var(--nvr-border)' }}></div>
