@@ -1135,15 +1135,85 @@ function App() {
 
                 {/* 底部電視牆控制控制列 (與照片一致) */}
                 <div className="nvr-panel" style={{ padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button onClick={() => setScreenLayout('grid-1')} className={`nvr-btn ${screenLayout === 'grid-1' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>1-Screen</button>
                     <button onClick={() => setScreenLayout('grid-4')} className={`nvr-btn ${screenLayout === 'grid-4' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>4-Screen</button>
                     <button onClick={() => setScreenLayout('grid-9')} className={`nvr-btn ${screenLayout === 'grid-9' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>9-Screen</button>
                     <button onClick={() => setScreenLayout('grid-12')} className={`nvr-btn ${screenLayout === 'grid-12' ? 'active' : ''}`} style={{ fontSize: '12px', padding: '6px 12px' }}>12-Screen</button>
+
+                    {/* 精緻的實施分割線與快捷控制列 */}
+                    <div style={{ width: '1px', background: 'var(--nvr-border)', height: '20px', margin: '0 8px' }}></div>
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button 
+                        onClick={handlePrevScreen} 
+                        disabled={screenLayout === 'grid-12'}
+                        className="nvr-btn" 
+                        style={{ 
+                          fontSize: '11px', 
+                          padding: '6px 10px',
+                          opacity: screenLayout === 'grid-12' ? 0.4 : 1,
+                          cursor: screenLayout === 'grid-12' ? 'not-allowed' : 'pointer'
+                        }}
+                        title="上一分頁螢幕"
+                      >
+                        ◁ 上一頁
+                      </button>
+                      <button 
+                        onClick={handleNextScreen} 
+                        disabled={screenLayout === 'grid-12'}
+                        className="nvr-btn" 
+                        style={{ 
+                          fontSize: '11px', 
+                          padding: '6px 10px',
+                          opacity: screenLayout === 'grid-12' ? 0.4 : 1,
+                          cursor: screenLayout === 'grid-12' ? 'not-allowed' : 'pointer'
+                        }}
+                        title="下一分頁螢幕"
+                      >
+                        ▷ 下一頁
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (screenLayout === 'grid-12') {
+                            alert("提示：12分割電視牆已滿版顯示全部通道，無需輪巡。請先切換至 4分割 或 9分割 畫面後啟動輪巡！");
+                            return;
+                          }
+                          setIsAutoTouring(p => !p);
+                        }} 
+                        className={`nvr-btn ${isAutoTouring ? 'active' : ''}`}
+                        style={{ 
+                          fontSize: '11px', 
+                          padding: '6px 10px',
+                          border: isAutoTouring ? '1px solid var(--normal-green)' : '1px solid var(--nvr-border)',
+                          boxShadow: isAutoTouring ? '0 0 5px rgba(16, 185, 129, 0.3)' : 'none',
+                          color: isAutoTouring ? 'var(--normal-green)' : 'inherit',
+                          fontWeight: isAutoTouring ? 'bold' : 'normal'
+                        }}
+                        title="啟動/停止自動畫面輪巡輪播"
+                      >
+                        🔄 {isAutoTouring ? '輪巡中 (ON)' : '自動輪巡'}
+                      </button>
+                      <button 
+                        onClick={handleCyclePictureMode} 
+                        className="nvr-btn" 
+                        style={{ 
+                          fontSize: '11px', 
+                          padding: '6px 10px',
+                          border: pictureMode !== 'default' ? '1px solid var(--alarm-red)' : '1px solid var(--nvr-border)',
+                          boxShadow: pictureMode !== 'default' ? '0 0 5px rgba(255, 51, 102, 0.3)' : 'none',
+                          color: pictureMode !== 'default' ? 'var(--alarm-red)' : 'inherit',
+                          fontWeight: pictureMode !== 'default' ? 'bold' : 'normal'
+                        }}
+                        title="循環切換全電視牆圖片渲染濾鏡"
+                      >
+                        🎨 {pictureMode === 'default' ? '圖片模式' : pictureMode.toUpperCase()}
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>操作提示：雙擊或點擊選中畫面可放大至單螢幕</span>
+                    <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>提示：雙擊畫面可放大；底欄可即時控制輪巡分頁與圖片濾鏡</span>
                     <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ fontSize: '12px', borderColor: 'var(--nvr-border-focus)' }}>
                       返回主選單 🏠
                     </button>
