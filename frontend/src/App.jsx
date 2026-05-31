@@ -19,6 +19,7 @@ const INITIAL_CAMERAS = [
 function App() {
   // SPA 路由狀態：main_menu | live_view | playback | add_camera | search | settings | information | help
   const [activeView, setActiveView] = useState('main_menu');
+  const [helpTab, setHelpTab] = useState('core'); // core | sop | finetune | hardware
   const [screenLayout, setScreenLayout] = useState('grid-12'); // grid-1 | grid-4 | grid-9 | grid-12
   const [selectedCameraId, setSelectedCameraId] = useState('CAM_A_DIST_BOARD');
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
@@ -3037,30 +3038,250 @@ function App() {
 
             {/* ================= SPA 畫面 8: 操作說明 (Help) ================= */}
             {activeView === 'help' && (
-              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
-                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: '16px' }}>❓ 工廠消防 SOP 操作指引與 AI 排除誤報說明 (Operation Guide)</strong>
-                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
+              <div className="nvr-panel" style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px', margin: '0 auto', width: '100%', overflowY: 'auto' }}>
+                <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    ❓ 工廠消防 SOP 操作指引與 AI 排除誤報說明 (Operation Guide)
+                  </strong>
+                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 12px', fontSize: '12px' }}>返回主選單 🏠</button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '13px', lineHeight: '1.6' }}>
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(255, 51, 102, 0.05)', borderColor: 'rgba(255, 51, 102, 0.2)' }}>
-                    <strong style={{ color: 'var(--alarm-red)', display: 'block', marginBottom: '5px' }}>🚨 工廠火警緊急應變流程 (SOP)</strong>
-                    <ol style={{ paddingLeft: '20px' }}>
-                      <li>當系統判定為火災並切斷配電櫃供電後，值班操作員應立即攜帶防毒面具前往 A棟配電櫃 進行現場確認。</li>
-                      <li>確認起火後，立即撥打 119 通報消防局，並通知廠長及機房安全負責人。</li>
-                      <li>利用乾粉滅火器或二氧化碳滅火器進行初期滅火，切忌用水撲滅電氣火災。</li>
-                    </ol>
-                  </div>
+                {/* 四大分頁頁籤 */}
+                <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                  {[
+                    { id: 'core', label: '📖 系統核心運作', desc: '雙重驗證特徵機制' },
+                    { id: 'sop', label: '🚨 火警應變 SOP', desc: '狀態機應變流程' },
+                    { id: 'finetune', label: '🧠 AI 誤報微調', desc: '人在迴圈微調白皮書' },
+                    { id: 'hardware', label: '🔌 設備與自檢維護', desc: '硬體健康與自檢' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setHelpTab(tab.id)}
+                      className={`nvr-btn ${helpTab === tab.id ? 'active' : ''}`}
+                      style={{ 
+                        flex: 1, 
+                        padding: '10px 15px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        backgroundColor: helpTab === tab.id ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                        borderColor: helpTab === tab.id ? 'var(--nvr-border-focus)' : 'rgba(255,255,255,0.1)',
+                        transition: 'all 0.2s ease',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: helpTab === tab.id ? 'var(--nvr-border-focus)' : '#fff' }}>{tab.label}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)' }}>{tab.desc}</span>
+                    </button>
+                  ))}
+                </div>
 
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
-                    <strong style={{ color: 'var(--normal-green)', display: 'block', marginBottom: '5px' }}>🧠 AI 二次微調與排除誤報機制</strong>
-                    <ul style={{ paddingLeft: '20px' }}>
-                      <li>**排除誤報**：若操作員確認為誤報（例如電焊火花或紅外線反光），請點選「排除此誤報」按鈕。</li>
-                      <li>**負樣本自動收集**：系統將自動擷取該影格，儲存至伺服器的 `backend/data/negative_samples` 目錄中。</li>
-                      <li>**二次微調策略**：收集足夠誤報樣本後，可手動執行後端微調指令，讓 AI 完美排除此工廠區域的誤報，精準度朝 100% 遞進。</li>
-                    </ul>
-                  </div>
+                {/* 分頁內容區 */}
+                <div style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  
+                  {/* 分頁 1: 系統核心運作 */}
+                  {helpTab === 'core' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div className="nvr-panel" style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--info-blue)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>🌀 雙重特徵驗證引擎 (Dual-Feature Verification)</span>
+                          <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px', fontWeight: 'normal' }}>AI 深度學習 + 實體物理特徵</span>
+                        </h4>
+                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: '1.6', margin: '0 0 15px 0' }}>
+                          本系統採用獨創的「AI 雙重特徵驗證引擎」，徹底為您解決傳統工廠視訊火警監控中常見的「電焊火花、反光、強光、動態異物」引起的誤報問題。當系統偵測到可能之威脅時，需同時通過以下雙重安全門檻：
+                        </p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                          <div style={{ padding: '15px', background: 'rgba(9, 10, 12, 0.4)', borderRadius: '4px', border: '1px solid rgba(255, 69, 0, 0.15)' }}>
+                            <strong style={{ color: 'var(--alarm-red)', display: 'block', fontSize: '13px', marginBottom: '8px' }}>🔥 明火雙重特徵檢測核心</strong>
+                            <ol style={{ paddingLeft: '18px', fontSize: '12px', margin: 0, color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>
+                              <li><strong>YOLOv8 深度神經網路：</strong>即時定位明火邊界框（預設信賴度門檻: 45%）。</li>
+                              <li><strong>實體閃爍頻率分析 (Flicker Frequency)：</strong>捕捉火焰特有的光敏閃爍特徵。真實明火之 Flickering 頻率多落於 <strong>5.0 ~ 15.0 Hz</strong> 之間。若頻率不符，系統判定為誤報（如固定紅光或非閃爍反光）。</li>
+                            </ol>
+                          </div>
+                          
+                          <div style={{ padding: '15px', background: 'rgba(9, 10, 12, 0.4)', borderRadius: '4px', border: '1px solid rgba(0, 191, 255, 0.15)' }}>
+                            <strong style={{ color: 'var(--info-blue)', display: 'block', fontSize: '13px', marginBottom: '8px' }}>☁️ 煙霧雙重特徵檢測核心</strong>
+                            <ol style={{ paddingLeft: '18px', fontSize: '12px', margin: 0, color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>
+                              <li><strong>煙霧背景清晰度分析：</strong>定位高頻模糊特徵與清晰度損失比率（Clarity Loss，門檻 &gt; 30%）。</li>
+                              <li><strong>時空向上漂移斜率：</strong>利用時序光流法 (Optical Flow) 追蹤特徵點。真實煙霧具備特有的向上、向四周擴散漂移軌跡。若偵測物體向下墜落或橫向高速移動，系統將自動排除。</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="nvr-panel" style={{ padding: '15px 20px', background: 'rgba(255, 255, 255, 0.01)', borderColor: 'rgba(255,255,255,0.03)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '20px' }}>🧠</span>
+                        <div style={{ color: 'var(--nvr-text-muted)', lineHeight: '1.5' }}>
+                          <strong>技術白皮書提醒：</strong>若您要調整 YOLO 置信度或閃爍頻率閾值，請至「系統設定 ⚙️」分頁進行微調，所有更改將即時寫入後端推理核心，並完成硬碟持久化儲存。
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 分頁 2: 火警應變 SOP */}
+                  {helpTab === 'sop' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px' }}>
+                        
+                        {/* 左側三階段 SOP */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(255, 153, 51, 0.03)', borderColor: 'rgba(255, 153, 51, 0.15)' }}>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                              <span style={{ background: 'var(--alarm-yellow)', color: '#000', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>1</span>
+                              <div>
+                                <strong style={{ color: 'var(--alarm-yellow)', display: 'block', fontSize: '13px', marginBottom: '4px' }}>第一階段：疑似火警預警（動態倒數計時）</strong>
+                                <p style={{ fontSize: '12px', margin: 0, color: 'rgba(255,255,255,0.75)', lineHeight: '1.5' }}>
+                                  當 AI 檢測與物理特徵雙重驗證通過時，控制台切換為<strong>「疑似火警 🚨」</strong>狀態，啟動無人值守倒數計時（預設 <strong>10 秒</strong>）。此時系統已同步透過 <strong>FastAPI 多軌多媒體通知模組</strong> 推送告警訊息至 Discord、Email、Line 與 Telegram。
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(255, 51, 102, 0.04)', borderColor: 'rgba(255, 51, 102, 0.15)' }}>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                              <span style={{ background: 'var(--alarm-red)', color: '#fff', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>2</span>
+                              <div>
+                                <strong style={{ color: 'var(--alarm-red)', display: 'block', fontSize: '13px', marginBottom: '4px' }}>第二階段：無人值守自動跳閘（自動防禦連動）</strong>
+                                <p style={{ fontSize: '12px', margin: 0, color: 'rgba(255,255,255,0.75)', lineHeight: '1.5' }}>
+                                  若倒數計時歸零且無人干預，系統自動判定為真實火警。若在設定中啟用了<strong>「分勵脫扣器自動斷電連動」</strong>，NVR 會即時送出繼電器脈衝信號，<strong>強行切斷 A棟高壓配電櫃總閘電源</strong>，防範火勢因電氣短路蔓延。同時系統會擷取該畫面的備份存檔。
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(16, 185, 129, 0.03)', borderColor: 'rgba(16, 185, 129, 0.15)' }}>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                              <span style={{ background: 'var(--normal-green)', color: '#000', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 }}>3</span>
+                              <div>
+                                <strong style={{ color: 'var(--normal-green)', display: 'block', fontSize: '13px', marginBottom: '4px' }}>第三階段：現場確認、處置與誤報排除</strong>
+                                <p style={{ fontSize: '12px', margin: 0, color: 'rgba(255,255,255,0.75)', lineHeight: '1.5' }}>
+                                  值班人員應穿戴防毒面具，帶乾粉/二氧化碳滅火器（切忌用水）前往 A棟 現場。
+                                  <br />
+                                  - <strong>若為真實火災：</strong>立即撥打 119 通報消防局，啟動全廠疏散。
+                                  <br />
+                                  - <strong>若確認為誤報：</strong>在控制台按下「排除此誤報」按鈕，系統將自動復歸斷路器、清除警報狀態，並自動採集誤報樣本。
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 右側流程摘要小面板 */}
+                        <div className="nvr-panel" style={{ padding: '15px', background: 'rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                          <strong style={{ fontSize: '12px', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '5px' }}>⚡ 毫秒級自動跳閘優勢</strong>
+                          <div style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', lineHeight: '1.4' }}>
+                            在工廠火災中，<strong>70% 以上的二次災害是由電氣火災蔓延所致</strong>。當高壓配電櫃起火時，水噴灑或火勢延燒會引發大範圍短路與爆炸。
+                            <br /><br />
+                            自動分勵脫扣跳閘能在火警確認的<strong>首個 100 毫秒內</strong>阻斷電流，有效杜絕二次災害發生。
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 分頁 3: AI 誤報微調 */}
+                  {helpTab === 'finetune' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      <div className="nvr-panel" style={{ padding: '20px', background: 'rgba(16, 185, 129, 0.02)', borderColor: 'rgba(16, 185, 129, 0.1)' }}>
+                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--normal-green)', fontSize: '14px' }}>🧠 人在迴圈 (Human-in-the-Loop) AI 自適應學習與二次微調白皮書</h4>
+                        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.6', margin: '0 0 15px 0' }}>
+                          沒有任何 AI 模型能夠 100% 避免誤報，因為不同工廠的背景光影、機械動態、電焊火花各有不同。本系統實作了<strong>「人在迴圈負樣本採集機制」</strong>，讓值班人員能主動協助 AI 在本地進行二次微調（Fine-tuning），使該工廠環境之誤報率趨近於 0%。
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
+                          
+                          {/* 負樣本採集流程 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <strong style={{ fontSize: '12px', color: '#fff' }}>📁 負樣本自動採集與存檔</strong>
+                            <div style={{ padding: '12px', background: '#090a0f', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+                              當值班操作員在警報期間點選<strong>「排除此誤報」</strong>時：
+                              <ol style={{ paddingLeft: '15px', margin: '5px 0 0 0', lineHeight: '1.5' }}>
+                                <li>系統會自動將該誤報畫面（包含標籤與物理遙測數值）擷取。</li>
+                                <li>自動儲存至伺服器專屬路徑：
+                                  <br />
+                                  <code style={{ color: 'var(--normal-green)', fontFamily: 'monospace', display: 'block', margin: '4px 0', padding: '2px 6px', background: 'rgba(255,255,255,0.03)', borderRadius: '3px', wordBreak: 'break-all' }}>
+                                    /backend/data/negative_samples/neg_YYYYMMDD_HHMMSS.jpg
+                                  </code>
+                                </li>
+                                <li>後端系統的負樣本計數器會自動 +1，並在儀表板即時同步顯示。</li>
+                              </ol>
+                            </div>
+                          </div>
+
+                          {/* 本地二次微調實務手冊 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <strong style={{ fontSize: '12px', color: '#fff' }}>🛠️ 本地二次微調（Fine-tuning）實務指南</strong>
+                            <div style={{ padding: '12px', background: '#090a0f', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '11px', color: 'rgba(255,255,255,0.7)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <span>收集足夠的負樣本（建議達 <strong>30 ~ 50 張</strong>）後，廠區 IT 人員可手動執行後端二次微調腳本，以更新 YOLOv8 明火權重模型：</span>
+                              <div style={{ background: '#030406', padding: '8px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
+                                <span style={{ position: 'absolute', right: '10px', top: '5px', fontSize: '9px', color: 'var(--nvr-text-muted)' }}>Bash</span>
+                                <code style={{ color: 'var(--info-blue)', fontFamily: 'monospace', display: 'block', whiteSpace: 'pre-wrap', fontSize: '10px' }}>
+                                  # 執行本地 YOLOv8 二次訓練<br />
+                                  python core/retrain.py --data config.yaml --epochs 15 --batch 8 --negatives ./data/negative_samples/
+                                </code>
+                              </div>
+                              <span style={{ fontSize: '10px', color: 'var(--nvr-text-muted)', fontStyle: 'italic' }}>
+                                ※ 備註：微調完成後，腳本會自動將新模型覆蓋至 `backend/data/models/yolov8n.pt`。NVR 系統檢測引擎會在毫秒級自動重新載入新模型，無須重啟伺服器。
+                              </span>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 分頁 4: 設備與自檢維護 */}
+                  {helpTab === 'hardware' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        
+                        {/* GPU 自適應降載與維護 */}
+                        <div className="nvr-panel" style={{ padding: '18px', background: 'rgba(255,255,255,0.02)' }}>
+                          <strong style={{ color: 'var(--info-blue)', display: 'block', fontSize: '13px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                            🌀 GPU 顯示卡狀態與自適應降載保護 (Throttling)
+                          </strong>
+                          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5', margin: '0 0 10px 0' }}>
+                            為確保系統在工廠高溫環境下 24 小時不間斷穩定運作，系統內建 GPU 核心溫度檢測核心：
+                          </p>
+                          <ul style={{ paddingLeft: '18px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', margin: '0 0 12px 0', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <li><strong>過熱臨界判定：</strong>當 GPU 核心溫度<strong>大於 82 °C</strong> 時，系統狀態切換為 WARNING 或 CRITICAL。</li>
+                            <li><strong>自適應降載：</strong>為防止 GPU 熱當機，系統會主動將影像分析幀率（FPS）降至低點（智慧平衡: 5 FPS；安全防護: 2 FPS），降低顯示晶片算力負載。</li>
+                            <li><strong>手動強冷送風：</strong>若要快速排熱，操作員可在「遙測資訊與安全防禦中心」將風扇模式改為<strong>手動 (Manual)</strong>，滑動控制桿強開至 <strong>85% ~ 100%</strong> 強制送風，能快速為核心降溫以重置降載狀態。</li>
+                          </ul>
+                        </div>
+
+                        {/* 脫扣器自檢與心跳超時 */}
+                        <div className="nvr-panel" style={{ padding: '18px', background: 'rgba(255, 51, 102, 0.01)', borderColor: 'rgba(255, 51, 102, 0.05)' }}>
+                          <strong style={{ color: 'var(--alarm-red)', display: 'block', fontSize: '13px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                            ⚡ 分勵脫扣器脈衝自檢與心跳監測
+                          </strong>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div>
+                              <strong style={{ fontSize: '11px', color: '#fff', display: 'block', marginBottom: '3px' }}>1. 遠端脫扣線圈自檢 (Dry Run)</strong>
+                              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: '1.4' }}>
+                                為確保分勵線圈無燒毀、無斷路，操作員可點選<strong>「執行遠端脫扣線圈自檢 (Dry Run)」</strong>。後端會對線圈輸出微小的低功率高頻毫秒級自檢脈衝，僅做阻抗檢測而<strong>不會造成實體斷路器跳閘跳電</strong>。
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <strong style={{ fontSize: '11px', color: '#fff', display: 'block', marginBottom: '3px' }}>2. 60 秒心跳中斷監控 (System Fault)</strong>
+                              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: '1.4' }}>
+                                前置 NVR 採集模組或 I/O 繼電器會每分鐘向後端發送心跳訊號。若<strong>超過 60 秒</strong>未收到心跳，系統判定連線故障（連線中斷），自動發送離線警報，並於電視牆主畫面上方顯示警告橫幅。
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )}
+
                 </div>
               </div>
             )}
