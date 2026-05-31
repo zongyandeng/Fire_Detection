@@ -27,6 +27,11 @@ function App() {
   const [activeSlots, setActiveSlots] = useState(INITIAL_CAMERAS.map(c => c.id));
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
 
+  // 電視牆自動輪巡、分頁與圖片模式狀態
+  const [tourPage, setTourPage] = useState(0);
+  const [isAutoTouring, setIsAutoTouring] = useState(false);
+  const [pictureMode, setPictureMode] = useState('default'); // default | vivid | infrared | thermal
+
   // 指派相機到特定電視牆插槽
   const handleAssignCameraToSlot = (slotIndex, cameraId) => {
     setActiveSlots(prev => {
@@ -34,13 +39,92 @@ function App() {
       next[slotIndex] = cameraId;
       return next;
     });
+    setIsAutoTouring(false); // 手動修改插槽時，停止自動輪巡以防衝突
   };
 
   // 重設為預設通道 (CH1 ~ CH12)
   const handleResetSlots = () => {
     setActiveSlots(INITIAL_CAMERAS.map(c => c.id));
     setSelectedSlotIndex(0);
+    setTourPage(0);
+    setIsAutoTouring(false);
   };
+
+  // 切換至下一張螢幕 (分頁)
+  const handleNextScreen = () => {
+    setActiveView('live_view');
+    setIsAutoTouring(false); // 手動切換時停止自動輪巡
+    const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+    if (limit === 12) return;
+    const maxPages = Math.ceil(cameras.length / limit);
+    const nextPage = (tourPage + 1) % maxPages;
+    setTourPage(nextPage);
+    setActiveSlots(oldSlots => {
+      const newSlots = [...oldSlots];
+      for (let i = 0; i < limit; i++) {
+        const camIndex = (nextPage * limit + i) % cameras.length;
+        newSlots[i] = cameras[camIndex].id;
+      }
+      return newSlots;
+    });
+  };
+
+  // 切換至上一螢幕 (分頁)
+  const handlePrevScreen = () => {
+    setActiveView('live_view');
+    setIsAutoTouring(false); // 手動切換時停止自動輪巡
+    const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+    if (limit === 12) return;
+    const maxPages = Math.ceil(cameras.length / limit);
+    const prevPage = (tourPage - 1 + maxPages) % maxPages;
+    setTourPage(prevPage);
+    setActiveSlots(oldSlots => {
+      const newSlots = [...oldSlots];
+      for (let i = 0; i < limit; i++) {
+        const camIndex = (prevPage * limit + i) % cameras.length;
+        newSlots[i] = cameras[camIndex].id;
+      }
+      return newSlots;
+    });
+  };
+
+  // 循環切換圖片模式 (預設 -> Vivid -> Infrared -> Thermal)
+  const handleCyclePictureMode = () => {
+    const modes = ['default', 'vivid', 'infrared', 'thermal'];
+    const currentIndex = modes.indexOf(pictureMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    setPictureMode(modes[nextIndex]);
+    const modeNames = {
+      default: '預設監控畫質',
+      vivid: '高對比畫面增強 (火焰特徵強化)',
+      infrared: '黑白紅外線夜視模擬',
+      thermal: '紅外線熱成像探測模擬'
+    };
+    alert(`影像渲染切換成功：${modeNames[modes[nextIndex]]}`);
+  };
+
+  // 啟動自動電視牆畫面輪巡 (每 4 秒切換下一頁)
+  useEffect(() => {
+    if (!isAutoTouring) return;
+    const interval = setInterval(() => {
+      const limit = screenLayout === 'grid-4' ? 4 : screenLayout === 'grid-9' ? 9 : 12;
+      if (limit === 12) return; // 12分割不用輪巡，只有一頁
+      const maxPages = Math.ceil(cameras.length / limit);
+      setTourPage(prev => {
+        const nextPage = (prev + 1) % maxPages;
+        setActiveSlots(oldSlots => {
+          const newSlots = [...oldSlots];
+          for (let i = 0; i < limit; i++) {
+            const camIndex = (nextPage * limit + i) % cameras.length;
+            newSlots[i] = cameras[camIndex].id;
+          }
+          return newSlots;
+        });
+        return nextPage;
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isAutoTouring, screenLayout, cameras]);
 
   // 確保當 cameras 列表新增或刪減時，電視牆插槽 activeSlots 也會即時進行安全更新與過濾
   useEffect(() => {
@@ -592,21 +676,80 @@ function App() {
                     <div style={{ width: '1px', background: 'var(--nvr-border)', margin: '0 5px' }}></div>
 
                     {/* 照片中其他分割控制圖示模擬 */}
-                    <button className="nvr-btn" onClick={() => { setScreenLayout('grid-12'); setActiveView('live_view'); }} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                    <button 
+                      className="nvr-btn" 
+                      onClick={handlePrevScreen} 
+                      disabled={screenLayout === 'grid-12'}
+                      style={{ 
+                        flexDirection: 'column', 
+                        padding: '12px 5px', 
+                        height: '75px', 
+                        gap: '6px', 
+                        opacity: screenLayout === 'grid-12' ? 0.4 : 1,
+                        cursor: screenLayout === 'grid-12' ? 'not-allowed' : 'pointer'
+                      }}
+                    >
                       <span style={{ fontSize: '18px' }}>◁</span>
-                      <span style={{ fontSize: '11px' }}>Prev Screen</span>
+                      <span style={{ fontSize: '11px' }}>上一螢幕</span>
                     </button>
-                    <button className="nvr-btn" onClick={() => { setScreenLayout('grid-12'); setActiveView('live_view'); }} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                    <button 
+                      className="nvr-btn" 
+                      onClick={handleNextScreen} 
+                      disabled={screenLayout === 'grid-12'}
+                      style={{ 
+                        flexDirection: 'column', 
+                        padding: '12px 5px', 
+                        height: '75px', 
+                        gap: '6px', 
+                        opacity: screenLayout === 'grid-12' ? 0.4 : 1,
+                        cursor: screenLayout === 'grid-12' ? 'not-allowed' : 'pointer'
+                      }}
+                    >
                       <span style={{ fontSize: '18px' }}>▷</span>
-                      <span style={{ fontSize: '11px' }}>Next Screen</span>
+                      <span style={{ fontSize: '11px' }}>下一張螢幕</span>
                     </button>
-                    <button className="nvr-btn" onClick={() => alert("自動畫面輪巡輪播已開啟！")} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', border: '1px solid var(--info-blue)' }}>
-                      <span style={{ fontSize: '18px', color: 'var(--info-blue)' }}>🔄</span>
-                      <span style={{ fontSize: '11px' }}>Start Switch</span>
+                    <button 
+                      className="nvr-btn" 
+                      onClick={() => {
+                        if (screenLayout === 'grid-12') {
+                          alert("提示：12分割電視牆已滿版顯示全部通道，無需輪巡。請先切換至 4分割 或 9分割 畫面後啟動輪巡！");
+                          return;
+                        }
+                        setIsAutoTouring(p => !p);
+                      }} 
+                      style={{ 
+                        flexDirection: 'column', 
+                        padding: '12px 5px', 
+                        height: '75px', 
+                        gap: '6px', 
+                        border: isAutoTouring ? '1.5px solid var(--normal-green)' : '1px solid var(--nvr-border)',
+                        boxShadow: isAutoTouring ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none',
+                        animation: isAutoTouring ? 'flash-slow 1s infinite alternate' : 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: '18px', color: isAutoTouring ? 'var(--normal-green)' : 'var(--info-blue)' }}>
+                        {isAutoTouring ? '🔄' : '🔄'}
+                      </span>
+                      <span style={{ fontSize: '11px', color: isAutoTouring ? 'var(--normal-green)' : 'inherit', fontWeight: isAutoTouring ? 'bold' : 'normal' }}>
+                        {isAutoTouring ? '輪巡中 (ON)' : '啟動開關'}
+                      </span>
                     </button>
-                    <button className="nvr-btn" onClick={() => alert("影像畫質渲染切換：高清 (HD)")} style={{ flexDirection: 'column', padding: '12px 5px', height: '75px', gap: '6px', opacity: 0.6 }}>
+                    <button 
+                      className="nvr-btn" 
+                      onClick={handleCyclePictureMode} 
+                      style={{ 
+                        flexDirection: 'column', 
+                        padding: '12px 5px', 
+                        height: '75px', 
+                        gap: '6px', 
+                        border: pictureMode !== 'default' ? '1.5px solid var(--alarm-red)' : '1px solid var(--nvr-border)',
+                        boxShadow: pictureMode !== 'default' ? '0 0 8px rgba(255, 51, 102, 0.4)' : 'none'
+                      }}
+                    >
                       <span style={{ fontSize: '18px' }}>🎨</span>
-                      <span style={{ fontSize: '11px' }}>Picture Mode</span>
+                      <span style={{ fontSize: '11px', fontWeight: pictureMode !== 'default' ? 'bold' : 'normal', color: pictureMode !== 'default' ? 'var(--alarm-red)' : 'inherit' }}>
+                        {pictureMode === 'default' ? '圖片模式' : pictureMode.toUpperCase()}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -807,6 +950,19 @@ function App() {
                               {/* OSD 浮動標籤 */}
                               <div className="camera-osd top-left">{cam.name}</div>
                               <div className="camera-osd top-right">
+                                {pictureMode !== 'default' && (
+                                  <span style={{
+                                    backgroundColor: pictureMode === 'vivid' ? 'var(--info-blue)' :
+                                                    pictureMode === 'infrared' ? 'var(--nvr-text-muted)' : 'var(--alarm-red)',
+                                    padding: '1px 4px',
+                                    borderRadius: '2px',
+                                    fontSize: '9px',
+                                    fontWeight: 'bold',
+                                    marginRight: '5px'
+                                  }}>
+                                    {pictureMode.toUpperCase()}
+                                  </span>
+                                )}
                                 {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
                                 <span style={{ color: '#10b981' }}>● REC</span>
                               </div>
@@ -820,7 +976,17 @@ function App() {
                               </div>
 
                               {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
-                              <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                              <div style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center', 
+                                overflow: 'hidden',
+                                filter: pictureMode === 'vivid' ? 'contrast(1.35) saturate(1.2)' :
+                                        pictureMode === 'infrared' ? 'grayscale(1) contrast(1.2) brightness(0.95)' :
+                                        pictureMode === 'thermal' ? 'grayscale(1) invert(1) sepia(1) hue-rotate(200deg) saturate(3.5) contrast(1.4)' : 'none'
+                              }}>
                                 {cam.id === 'CAM_A_DIST_BOARD' ? (
                                   streamData?.image ? (
                                     <img
@@ -901,6 +1067,19 @@ function App() {
                                 </div>
                                 
                                 <div className="camera-osd top-right">
+                                  {pictureMode !== 'default' && (
+                                    <span style={{
+                                      backgroundColor: pictureMode === 'vivid' ? 'var(--info-blue)' :
+                                                      pictureMode === 'infrared' ? 'var(--nvr-text-muted)' : 'var(--alarm-red)',
+                                      padding: '1px 4px',
+                                      borderRadius: '2px',
+                                      fontSize: '9px',
+                                      fontWeight: 'bold',
+                                      marginRight: '5px'
+                                    }}>
+                                      {pictureMode.toUpperCase()}
+                                    </span>
+                                  )}
                                   {cam.isAI && <span style={{ backgroundColor: 'rgba(255, 51, 102, 0.7)', padding: '1px 4px', borderRadius: '2px', fontSize: '9px' }}>AI ACTIVE</span>}
                                   <span style={{ color: '#10b981' }}>● REC</span>
                                 </div>
@@ -914,7 +1093,17 @@ function App() {
                                 </div>
 
                                 {/* 渲染真實影像 (CH1) 或 模擬影像 (CH2~12) */}
-                                <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                                <div style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  display: 'flex', 
+                                  justifyContent: 'center', 
+                                  alignItems: 'center', 
+                                  overflow: 'hidden',
+                                  filter: pictureMode === 'vivid' ? 'contrast(1.35) saturate(1.2)' :
+                                          pictureMode === 'infrared' ? 'grayscale(1) contrast(1.2) brightness(0.95)' :
+                                          pictureMode === 'thermal' ? 'grayscale(1) invert(1) sepia(1) hue-rotate(200deg) saturate(3.5) contrast(1.4)' : 'none'
+                                }}>
                                   {cam.id === 'CAM_A_DIST_BOARD' ? (
                                     streamData?.image ? (
                                       <img
