@@ -843,16 +843,7 @@ function App() {
                         </div>
                       </div>
 
-                      {/* 重設與動作區 */}
-                      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button
-                          onClick={handleResetSlots}
-                          className="nvr-btn"
-                          style={{ fontSize: '11px', width: '100%', background: 'rgba(255,255,255,0.05)', color: 'var(--nvr-text)' }}
-                        >
-                          🔄 重設為預設通道 (CH1-CH12)
-                        </button>
-                      </div>
+
                     </div>
 
                   {/* 右側監控網格區域 */}
