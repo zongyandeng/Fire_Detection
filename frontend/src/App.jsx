@@ -41,6 +41,22 @@ function App() {
     setActiveSlots(INITIAL_CAMERAS.map(c => c.id));
     setSelectedSlotIndex(0);
   };
+
+  // 確保當 cameras 列表新增或刪減時，電視牆插槽 activeSlots 也會即時進行安全更新與過濾
+  useEffect(() => {
+    if (cameras.length === 0) return;
+    setActiveSlots(prev => {
+      const cameraIds = cameras.map(c => c.id);
+      const next = prev.map(id => {
+        // 如果該插槽指派的攝影機已被刪除，則自動替換為當前第一個可用的攝影機 ID
+        if (!cameraIds.includes(id)) {
+          return cameraIds[0];
+        }
+        return id;
+      });
+      return next;
+    });
+  }, [cameras]);
   
   // NVR 時間戳 (秒級即時更新)
   const [nvrTime, setNvrTime] = useState(new Date().toLocaleString('zh-TW', { hour12: false }));
@@ -1021,12 +1037,36 @@ function App() {
                   <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); alert("工廠安全提示：您目前處於唯讀模擬環境下，新增攝影機配置已成功儲存至前端記憶體快取。"); }} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const name = form.camName.value;
+                    const ch = form.camCh.value;
+                    const area = form.camArea.value || '未定義區域';
+                    const isAI = form.camAI.checked;
+                    
+                    const newCamId = `CAM_CUSTOM_${Date.now()}`;
+                    const newCam = {
+                      id: newCamId,
+                      name: `${ch} - ${name}`,
+                      area: area,
+                      status: 'ONLINE',
+                      isAI: isAI,
+                      type: 'Simulated'
+                    };
+                    
+                    setCameras(prev => [...prev, newCam]);
+                    alert(`成功新增攝影機：${ch} - ${name}！已即時同步至電視牆。`);
+                    form.reset();
+                  }} 
+                  style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+                >
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div>
                       <label className="nvr-label">攝影機通道 (CH)</label>
-                      <select className="nvr-input">
-                        <option>CH13 (自動分配)</option>
+                      <select name="camCh" className="nvr-input">
+                        <option>CH13</option>
                         <option>CH14</option>
                         <option>CH15</option>
                         <option>CH16</option>
@@ -1035,24 +1075,24 @@ function App() {
 
                     <div>
                       <label className="nvr-label">攝影機自訂名稱</label>
-                      <input type="text" placeholder="例如：I棟成品倉庫西北角" className="nvr-input" required />
+                      <input name="camName" type="text" placeholder="例如：I棟成品倉庫西北角" className="nvr-input" required />
                     </div>
                   </div>
 
                   <div>
                     <label className="nvr-label">RTSP 視訊串流網址 (RTSP Stream Link)</label>
-                    <input type="text" placeholder="rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream" className="nvr-input" required />
+                    <input name="camRtsp" type="text" placeholder="rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream" className="nvr-input" required />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div>
                       <label className="nvr-label">部署工廠區域</label>
-                      <input type="text" placeholder="例如：成品包裝區" className="nvr-input" />
+                      <input name="camArea" type="text" placeholder="例如：成品包裝區" className="nvr-input" />
                     </div>
 
                     <div>
                       <label className="nvr-label">視訊編碼格式</label>
-                      <select className="nvr-input">
+                      <select name="camFormat" className="nvr-input">
                         <option>H.265 (智慧壓縮 - 推薦)</option>
                         <option>H.264</option>
                         <option>MJPEG</option>
@@ -1064,13 +1104,13 @@ function App() {
                     <label className="nvr-label" style={{ color: '#fff', fontSize: '13px' }}>🧠 啟用 AI 二階段特徵分析功能</label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input type="checkbox" defaultChecked /> 火焰 YOLO 核心檢測
+                        <input name="camAI" type="checkbox" defaultChecked /> 火焰 YOLO 核心檢測
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input type="checkbox" defaultChecked /> 煙霧背景模糊檢測
+                        <input name="camSmoke" type="checkbox" defaultChecked /> 煙霧背景模糊檢測
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input type="checkbox" /> 人車入侵辨識
+                        <input name="camHuman" type="checkbox" /> 人車入侵辨識
                       </label>
                     </div>
                   </div>
@@ -1079,6 +1119,74 @@ function App() {
                     💾 儲存並啟用此相機通道
                   </button>
                 </form>
+
+                {/* 攝影機列表與刪減管理 */}
+                <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '8px' }}>
+                    <strong style={{ fontSize: '14px', color: 'var(--nvr-text)', display: 'block' }}>📹 目前已啟用攝影機清單 (已登記 {cameras.length} 台)</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)' }}>支援即時刪減，電視牆將自動過濾被移除之通道</span>
+                  </div>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--nvr-border)', color: 'var(--nvr-text-muted)', textAlign: 'left' }}>
+                          <th style={{ padding: '8px' }}>通道/名稱</th>
+                          <th>區域</th>
+                          <th>AI功能</th>
+                          <th>連線狀態</th>
+                          <th style={{ textAlign: 'right' }}>操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cameras.map(cam => (
+                          <tr key={cam.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '8px', color: '#fff', fontWeight: 'bold' }}>{cam.name}</td>
+                            <td>{cam.area}</td>
+                            <td>
+                              <span style={{
+                                backgroundColor: cam.isAI ? 'rgba(255, 51, 102, 0.15)' : 'rgba(255,255,255,0.05)',
+                                color: cam.isAI ? 'var(--alarm-red)' : 'var(--nvr-text-muted)',
+                                padding: '2px 6px',
+                                borderRadius: '3px',
+                                fontSize: '10px'
+                              }}>
+                                {cam.isAI ? 'AI 雙特徵' : '常規視訊'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="led-indicator led-green" style={{ marginRight: '6px' }}></span>
+                              <span style={{ color: 'var(--normal-green)' }}>ONLINE</span>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {cam.id === 'CAM_A_DIST_BOARD' ? (
+                                <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontStyle: 'italic' }}>系統核心鎖定</span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`確定要刪除攝影機「${cam.name}」嗎？此操作將會即時將其移出電視牆視窗。`)) {
+                                      setCameras(prev => prev.filter(c => c.id !== cam.id));
+                                    }
+                                  }}
+                                  className="nvr-btn"
+                                  style={{
+                                    padding: '2px 8px',
+                                    fontSize: '11px',
+                                    backgroundColor: 'rgba(255, 51, 102, 0.1)',
+                                    borderColor: 'rgba(255, 51, 102, 0.3)',
+                                    color: 'var(--alarm-red)'
+                                  }}
+                                >
+                                  🗑️ 刪除
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
             )}
 
