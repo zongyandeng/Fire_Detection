@@ -22,6 +22,11 @@ function App() {
   const [screenLayout, setScreenLayout] = useState('grid-12'); // grid-1 | grid-4 | grid-9 | grid-12
   const [selectedCameraId, setSelectedCameraId] = useState('CAM_A_DIST_BOARD');
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
+  
+  // 編輯攝影機狀態與防手滑刪除定時器狀態
+  const [editingCamera, setEditingCamera] = useState(null);
+  const [deleteConfirmCamId, setDeleteConfirmCamId] = useState(null);
+  const deleteTimerRef = useRef(null);
 
   // 電視牆自訂通道與插槽狀態
   const [activeSlots, setActiveSlots] = useState(INITIAL_CAMERAS.map(c => c.id));
@@ -756,6 +761,18 @@ function App() {
       </div>
     );
   }
+
+  // 解析當前正要編輯的攝影機的通道與自訂名稱
+  const parsedEditInfo = (() => {
+    let ch = 'CH13';
+    let customName = '';
+    if (editingCamera) {
+      const nameParts = editingCamera.name.split(' - ');
+      ch = nameParts[0] || 'CH13';
+      customName = nameParts[1] || '';
+    }
+    return { ch, customName };
+  })();
 
   return (
     <>
@@ -1738,92 +1755,128 @@ function App() {
             {activeView === 'add_camera' && (
               <div className="nvr-panel" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
                 <div style={{ borderBottom: '1px solid var(--nvr-border)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: '16px' }}>➕ 新增與管理工廠攝影機通道 (Camera Provisioning)</strong>
-                  <button onClick={() => setActiveView('main_menu')} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
-                </div>
-
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const form = e.target;
-                    const name = form.camName.value;
-                    const ch = form.camCh.value;
-                    const area = form.camArea.value || '未定義區域';
-                    const isAI = form.camAI.checked;
-                    
-                    const newCamId = `CAM_CUSTOM_${Date.now()}`;
-                    const newCam = {
-                      id: newCamId,
-                      name: `${ch} - ${name}`,
-                      area: area,
-                      status: 'ONLINE',
-                      isAI: isAI,
-                      type: 'Simulated'
-                    };
-                    
-                    setCameras(prev => [...prev, newCam]);
-                    alert(`成功新增攝影機：${ch} - ${name}！已即時同步至電視牆。`);
-                    form.reset();
-                  }} 
-                  style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div>
-                      <label className="nvr-label">攝影機通道 (CH)</label>
-                      <select name="camCh" className="nvr-input">
-                        <option>CH13</option>
-                        <option>CH14</option>
-                        <option>CH15</option>
-                        <option>CH16</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="nvr-label">攝影機自訂名稱</label>
-                      <input name="camName" type="text" placeholder="例如：I棟成品倉庫西北角" className="nvr-input" required />
-                    </div>
+                  <strong style={{ fontSize: '16px' }}>
+                    {editingCamera ? `📝 編輯與更新工廠攝影機通道 (${parsedEditInfo.ch})` : '➕ 新增與管理工廠攝影機通道 (Camera Provisioning)'}
+                  </strong>
+                    <button onClick={() => { setEditingCamera(null); setActiveView('main_menu'); }} className="nvr-btn" style={{ padding: '4px 10px', fontSize: '12px' }}>返回主選單 🏠</button>
                   </div>
 
-                  <div>
-                    <label className="nvr-label">RTSP 視訊串流網址 (RTSP Stream Link)</label>
-                    <input name="camRtsp" type="text" placeholder="rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream" className="nvr-input" required />
-                  </div>
+                  <form 
+                    key={editingCamera ? editingCamera.id : 'add'}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.target;
+                      const name = form.camName.value;
+                      const ch = form.camCh.value;
+                      const area = form.camArea.value || '未定義區域';
+                      const isAI = form.camAI.checked;
+                      const rtsp = form.camRtsp.value;
+                      const format = form.camFormat.value;
+                      
+                      if (editingCamera) {
+                        setCameras(prev => prev.map(cam => {
+                          if (cam.id === editingCamera.id) {
+                            return {
+                              ...cam,
+                              name: `${ch} - ${name}`,
+                              area: area,
+                              isAI: isAI,
+                              rtsp: rtsp,
+                              format: format
+                            };
+                          }
+                          return cam;
+                        }));
+                        alert(`成功更新攝影機：${ch} - ${name}！`);
+                        setEditingCamera(null);
+                      } else {
+                        const newCamId = `CAM_CUSTOM_${Date.now()}`;
+                        const newCam = {
+                          id: newCamId,
+                          name: `${ch} - ${name}`,
+                          area: area,
+                          status: 'ONLINE',
+                          isAI: isAI,
+                          type: 'Simulated',
+                          rtsp: rtsp,
+                          format: format
+                        };
+                        
+                        setCameras(prev => [...prev, newCam]);
+                        alert(`成功新增攝影機：${ch} - ${name}！已即時同步至電視牆。`);
+                      }
+                      form.reset();
+                    }} 
+                    style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div>
+                        <label className="nvr-label">攝影機通道 (CH)</label>
+                        <select name="camCh" className="nvr-input" defaultValue={parsedEditInfo.ch}>
+                          {Array.from({ length: 16 }, (_, i) => `CH${i + 1}`).map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div>
-                      <label className="nvr-label">部署工廠區域</label>
-                      <input name="camArea" type="text" placeholder="例如：成品包裝區" className="nvr-input" />
+                      <div>
+                        <label className="nvr-label">攝影機自訂名稱</label>
+                        <input name="camName" type="text" placeholder="例如：I棟成品倉庫西北角" className="nvr-input" defaultValue={parsedEditInfo.customName} required />
+                      </div>
                     </div>
 
                     <div>
-                      <label className="nvr-label">視訊編碼格式</label>
-                      <select name="camFormat" className="nvr-input">
-                        <option>H.265 (智慧壓縮 - 推薦)</option>
-                        <option>H.264</option>
-                        <option>MJPEG</option>
-                      </select>
+                      <label className="nvr-label">RTSP 視訊串流網址 (RTSP Stream Link)</label>
+                      <input name="camRtsp" type="text" placeholder="rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream" className="nvr-input" defaultValue={editingCamera?.rtsp || 'rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream'} required />
                     </div>
-                  </div>
 
-                  <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
-                    <label className="nvr-label" style={{ color: '#fff', fontSize: '13px' }}>🧠 啟用 AI 二階段特徵分析功能</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input name="camAI" type="checkbox" defaultChecked /> 火焰 YOLO 核心檢測
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input name="camSmoke" type="checkbox" defaultChecked /> 煙霧背景模糊檢測
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input name="camHuman" type="checkbox" /> 人車入侵辨識
-                      </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                      <div>
+                        <label className="nvr-label">部署工廠區域</label>
+                        <input name="camArea" type="text" placeholder="例如：成品包裝區" className="nvr-input" defaultValue={editingCamera ? editingCamera.area : ''} />
+                      </div>
+
+                      <div>
+                        <label className="nvr-label">視訊編碼格式</label>
+                        <select name="camFormat" className="nvr-input" defaultValue={editingCamera?.format || 'H.265 (智慧壓縮 - 推薦)'}>
+                          <option value="H.265 (智慧壓縮 - 推薦)">H.265 (智慧壓縮 - 推薦)</option>
+                          <option value="H.264">H.264</option>
+                          <option value="MJPEG">MJPEG</option>
+                        </select>
+                      </div>
                     </div>
-                  </div>
 
-                  <button type="submit" className="nvr-btn" style={{ padding: '12px', border: '1px solid var(--nvr-border-focus)', fontSize: '13px', fontWeight: 'bold' }}>
-                    💾 儲存並啟用此相機通道
-                  </button>
-                </form>
+                    <div className="nvr-panel" style={{ padding: '15px', background: 'var(--nvr-panel-light)' }}>
+                      <label className="nvr-label" style={{ color: '#fff', fontSize: '13px' }}>🧠 啟用 AI 二階段特徵分析功能</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input name="camAI" type="checkbox" defaultChecked={editingCamera ? editingCamera.isAI : true} /> 火焰 YOLO 核心檢測
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input name="camSmoke" type="checkbox" defaultChecked={editingCamera ? editingCamera.isAI : true} /> 煙霧背景模糊檢測
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input name="camHuman" type="checkbox" defaultChecked={false} /> 人車入侵辨識
+                        </label>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      <button type="submit" className="nvr-btn" style={{ flex: 1, padding: '12px', border: '1px solid var(--nvr-border-focus)', fontSize: '13px', fontWeight: 'bold' }}>
+                        {editingCamera ? '💾 儲存並更新相機配置' : '💾 儲存並啟用此相機通道'}
+                      </button>
+                      {editingCamera && (
+                        <button 
+                          type="button" 
+                          onClick={() => setEditingCamera(null)} 
+                          className="nvr-btn" 
+                          style={{ padding: '12px 20px', borderColor: 'var(--nvr-border)', fontSize: '13px' }}
+                        >
+                          ❌ 取消編輯
+                        </button>
+                      )}
+                    </div>
+                  </form>
 
                 {/* 攝影機列表與刪減管理 */}
                 <div className="nvr-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -1866,23 +1919,77 @@ function App() {
                               {cam.id === 'CAM_A_DIST_BOARD' ? (
                                 <span style={{ fontSize: '11px', color: 'var(--nvr-text-muted)', fontStyle: 'italic' }}>系統核心鎖定</span>
                               ) : (
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`確定要刪除攝影機「${cam.name}」嗎？此操作將會即時將其移出電視牆視窗。`)) {
-                                      setCameras(prev => prev.filter(c => c.id !== cam.id));
-                                    }
-                                  }}
-                                  className="nvr-btn"
-                                  style={{
-                                    padding: '2px 8px',
-                                    fontSize: '11px',
-                                    backgroundColor: 'rgba(255, 51, 102, 0.1)',
-                                    borderColor: 'rgba(255, 51, 102, 0.3)',
-                                    color: 'var(--alarm-red)'
-                                  }}
-                                >
-                                  🗑️ 刪除
-                                </button>
+                                <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCamera(cam);
+                                      const mainEl = document.querySelector('main');
+                                      if (mainEl) {
+                                        mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }
+                                    }}
+                                    className="nvr-btn"
+                                    style={{
+                                      padding: '2px 8px',
+                                      fontSize: '11px',
+                                      marginRight: '8px',
+                                      borderColor: editingCamera?.id === cam.id ? 'var(--nvr-border-focus)' : 'var(--nvr-border)',
+                                      boxShadow: editingCamera?.id === cam.id ? '0 0 5px rgba(255, 51, 102, 0.3)' : 'none',
+                                      color: editingCamera?.id === cam.id ? 'var(--nvr-border-focus)' : 'inherit'
+                                    }}
+                                  >
+                                    📝 編輯
+                                  </button>
+
+                                  {deleteConfirmCamId === cam.id ? (
+                                    <button
+                                      onClick={() => {
+                                        if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+                                        setDeleteConfirmCamId(null);
+                                        
+                                        if (confirm(`⚠️ 安全警告：您確定要永久刪除攝影機「${cam.name}」嗎？\n此操作將即時把該通道移出電視牆，且不可復原！`)) {
+                                          setCameras(prev => prev.filter(c => c.id !== cam.id));
+                                          if (editingCamera?.id === cam.id) {
+                                            setEditingCamera(null);
+                                          }
+                                        }
+                                      }}
+                                      className="nvr-btn"
+                                      style={{
+                                        padding: '2px 8px',
+                                        fontSize: '11px',
+                                        backgroundColor: 'var(--alarm-red)',
+                                        borderColor: 'var(--alarm-red)',
+                                        color: '#fff',
+                                        fontWeight: 'bold',
+                                        animation: 'flash-fast 0.5s infinite alternate'
+                                      }}
+                                    >
+                                      ⚠️ 再次點選以確認！
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+                                        setDeleteConfirmCamId(cam.id);
+                                        
+                                        deleteTimerRef.current = setTimeout(() => {
+                                          setDeleteConfirmCamId(null);
+                                        }, 5000);
+                                      }}
+                                      className="nvr-btn"
+                                      style={{
+                                        padding: '2px 8px',
+                                        fontSize: '11px',
+                                        backgroundColor: 'rgba(255, 51, 102, 0.08)',
+                                        borderColor: 'rgba(255, 51, 102, 0.3)',
+                                        color: 'var(--alarm-red)'
+                                      }}
+                                    >
+                                      🗑️ 刪除
+                                     </button>
+                                   )}
+                                 </div>
                               )}
                             </td>
                           </tr>
